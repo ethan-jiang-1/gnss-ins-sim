@@ -36,7 +36,7 @@ def time_series_from_psd(sxx, freq, fs, n):
     ### check if interpolation is needed
     repeat_output = False
     N = n
-    if n%2 != 0:                                # N should be even
+    if n % 2 != 0:                                # N should be even
         N = n+1
         repeat_output = True
     if N > 16384:                               # max data length is 16384

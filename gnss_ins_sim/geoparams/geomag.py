@@ -68,15 +68,15 @@ class GeoMag:
             
             #for (m=0,D3=1,D4=(n+m+D3)/D3;D4>0;D4--,m+=D3):
             m=0
-            D3=1
+            #D3=1
             #D4=(n+m+D3)/D3
             D4=(n+m+1)
             while D4>0:
 
-        # /*
+                # /*
                 # COMPUTE UNNORMALIZED ASSOCIATED LEGENDRE POLYNOMIALS
                 # AND DERIVATIVES VIA RECURSION RELATIONS
-        # */
+                # */
                 if (alt != oalt or glat != olat):
                     if (n == m):
                         self.p[m][n] = st * self.p[m-1][n-1]
@@ -162,7 +162,7 @@ class GeoMag:
             if (glat > 0.0 and glon >= 0.0):
                 gv = dec-glon
             if (glat > 0.0 and glon < 0.0):
-                gv = dec+math.fabs(glon);
+                gv = dec+math.fabs(glon)
             if (glat < 0.0 and glon >= 0.0):
                 gv = dec+glon
             if (glat < 0.0 and glon < 0.0):
@@ -289,9 +289,9 @@ class GeoMagTest(unittest.TestCase):
     
     test_values = (
         # date, alt, lat, lon, var
-        (d1, 0, 80, 0,  -3.85),
+        (d1, 0, 80, 0, -3.85),
         (d1, 0, 0, 120, 0.57),
-        (d1, 0, -80, 240,  69.81),
+        (d1, 0, -80, 240, 69.81),
         (d1, 328083.99, 80, 0, -4.27),
         (d1, 328083.99, 0, 120, 0.56),
         (d1, 328083.99, -80, 240, 69.22),

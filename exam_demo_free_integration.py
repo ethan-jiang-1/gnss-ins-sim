@@ -83,7 +83,7 @@ def test_free_integration():
     #### Algorithm
     # Free integration in a virtual inertial frame
     from demo_algorithms import free_integration_odo
-    from demo_algorithms import free_integration
+    #from demo_algorithms import free_integration
 
 
     # create the algorith object
@@ -97,8 +97,7 @@ def test_free_integration():
                       imu=imu,
                       mode=None,
                       env=None,
-                      algorithm=[algo1])
-                      #algorithm=[algo1, algo2])
+                      algorithm=[algo1]) #algorithm=[algo1, algo2])
     # run the simulation for 1000 times
     sim.run(10)
     # generate simulation results, summary
@@ -106,6 +105,7 @@ def test_free_integration():
     sim.results(err_stats_start=-1, gen_kml=True)
     # plot postion error
     sim.plot(['pos'], opt={'pos':'error'})
+
 
 if __name__ == '__main__':
     test_free_integration()

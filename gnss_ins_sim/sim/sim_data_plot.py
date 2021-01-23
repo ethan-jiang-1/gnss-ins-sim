@@ -7,11 +7,11 @@ Created on 2020-07-24
 @author: dongxiaoguang
 """
 
-import math
+#import math
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.mlab as mlab
-from mpl_toolkits.mplot3d import Axes3D
+#import matplotlib.mlab as mlab
+#from mpl_toolkits.mplot3d import Axes3D
 from . import sim_data
 
 def plot(x, y, key, plot3d, mpl_opt):

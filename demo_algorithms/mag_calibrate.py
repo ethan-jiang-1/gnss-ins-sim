@@ -9,10 +9,10 @@ Created on 2018-03-15
 
 # import
 import os
-import math
+#import math
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.mlab as mlab
+#import matplotlib.mlab as mlab
 from ctypes import *
 
 # globals
@@ -145,7 +145,9 @@ class MagCal(object):
         # call cmake and make to build the libs
         os.chdir(cmake_dir)
         ret = os.system("cmake ..")
+        print(ret)
         ret = os.system("make")
+        print(ret)
         algo_lib = cmake_dir + 'lib//' + algo_lib
         if os.path.exists(algo_lib):
             os.system("mv " + algo_lib + " " + dst_dir)

@@ -8,7 +8,7 @@ Created on 2017-09-27
 """
 
 # import
-import math
+#import math
 import numpy as np
 from gnss_ins_sim.attitude import attitude
 

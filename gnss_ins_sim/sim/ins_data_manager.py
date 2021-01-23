@@ -326,7 +326,7 @@ class InsDataMgr(object):
             if data_name not in self.available:
                 self.available.append(data_name)
         else:
-            raise ValueError("Unsupported data: %s."%data_name)
+            raise ValueError("Unsupported data: %s." % data_name)
 
     def set_algo_output(self, algo_output):
         '''
@@ -602,8 +602,7 @@ class InsDataMgr(object):
             # default x axis data
             x_axis = self.time
             # choose proper x axis data for specific y axis data
-            if what_to_plot == self.ref_gps.name or what_to_plot == self.gps.name or\
-                what_to_plot == self.gps_visibility.name or what_to_plot == self.gps_time.name:
+            if what_to_plot == self.ref_gps.name or what_to_plot == self.gps.name or what_to_plot == self.gps_visibility.name or what_to_plot == self.gps_time.name:
                 x_axis = self.gps_time
             elif what_to_plot in self.__algo_output and self.algo_time.name in self.available:
                 x_axis = self.algo_time

@@ -44,5 +44,6 @@ def test_path_gen():
     # plot data, 3d plot of reference positoin, 2d plots of gyro and accel
     sim.plot(['ref_pos', 'gyro', 'gps_visibility'], opt={'ref_pos': '3d'})
 
+
 if __name__ == '__main__':
     test_path_gen()

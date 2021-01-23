@@ -333,8 +333,8 @@ def dcm2quat(c):
             tmp[2] = (c[0, 1] + c[1, 0]) * sqdip1
             tmp[3] = (c[2, 0] + c[0, 2]) * sqdip1
     # quaternion normalization, *** no need if dcm is really a dcm
-    #quatNormalize(tmp,q)
-	# ensure q[0] is non-negative
+    # quatNormalize(tmp,q)
+    # ensure q[0] is non-negative
     if tmp[0] < 0:
         q = -1.0 * tmp
     else:

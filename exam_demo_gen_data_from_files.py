@@ -47,7 +47,7 @@ def test_gen_data_from_files(data_dir, motion_csv_path):
     #### start simulation
     #### Algorithm
     # Free integration in a virtual inertial frame
-    from demo_algorithms import free_integration
+    #from demo_algorithms import free_integration
     from demo_algorithms import free_integration_odo
 
     '''

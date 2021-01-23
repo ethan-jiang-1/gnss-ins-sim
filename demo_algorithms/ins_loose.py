@@ -11,7 +11,7 @@ Created on 2018-05-24
 import math
 import numpy as np
 from gnss_ins_sim.attitude import attitude
-from gnss_ins_sim.geoparams import geoparams
+#from gnss_ins_sim.geoparams import geoparams
 
 UNINI = 0           # uninitialized
 ATTITUDE_INI = 1    # attitude initialized
@@ -68,6 +68,8 @@ class InsLoose(object):
         Q = np.zeros((15, 15))
         H = np.eye(15)
         R = np.zeros((6, 1))
+
+        (x, F, Q, H, R)
         # KF
         dt = 1.0 /fs
         n = time.shape[0]
@@ -112,6 +114,7 @@ class InsLoose(object):
                     # initialize position and velocity
                     pos = gps[i_gps_time, 0:3]
                     vel = gps[i_gps_time, 3:6]
+                    (pos, vel)
                     # propagate to current time
                     self.prediction(gyro[i-1, :], accel[i-1, :], time[i]-gps_time[i_gps_time])
                     self.ini = POS_INI

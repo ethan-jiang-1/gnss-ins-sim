@@ -355,7 +355,9 @@ class DMU380Sim(object):
         # call cmake and make to build the libs
         os.chdir(cmake_dir)
         ret = os.system("cmake ..")
+        print(ret)
         ret = os.system("make")
+        print(ret)
         algo_lib = cmake_dir + 'algo//' + algo_lib
         sim_utilities_lib = cmake_dir + 'SimUtilities//' + sim_utilities_lib
         if os.path.exists(algo_lib) and os.path.exists(sim_utilities_lib):

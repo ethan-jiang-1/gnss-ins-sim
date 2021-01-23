@@ -286,8 +286,7 @@ class IMU(object):
         if gps_error is None:
             self.gps_err = gps_low_accuracy
         elif isinstance(gps_error, dict):
-            if 'stdp' in gps_error and\
-                'stdv' in gps_error:
+            if 'stdp' in gps_error and 'stdv' in gps_error:
                 self.gps_err = gps_error
             else:
                 raise ValueError('gps_error should have key: stdp and stdv')
@@ -308,8 +307,7 @@ class IMU(object):
         if odo_error is None:
             self.odo_err = odo_low_accuracy
         elif isinstance(odo_error, dict):
-            if 'stdp' in odo_error and\
-                'stdv' in odo_error:
+            if 'stdp' in odo_error and 'stdv' in odo_error:
                 self.gps_err = odo_error
             else:
                 raise ValueError('odo_error should have key: stdp and stdv')

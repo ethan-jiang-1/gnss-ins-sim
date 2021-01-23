@@ -7,7 +7,7 @@ Created on 2017-11-29
 @author: dongxiaoguang
 """
 
-import os
+#import os
 import math
 import numpy as np
 from ..geoparams import geoparams
