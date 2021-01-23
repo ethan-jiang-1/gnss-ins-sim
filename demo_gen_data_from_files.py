@@ -38,7 +38,8 @@ def gen_data_first(data_dir):
                       algorithm=None)
     sim.run(10)
     # save simulation data to files
-    sim.results(data_dir)
+    sim_result = sim.results(data_dir)
+    print(sim_result)
 
 def test_gen_data_from_files(data_dir):
     '''
@@ -76,7 +77,8 @@ def test_gen_data_from_files(data_dir):
     # run the simulation for 1000 times
     sim.run(1)
     # generate simulation results, summary
-    sim.results('', err_stats_start=-1, gen_kml=True)
+    sim_result = sim.results('', err_stats_start=-1, gen_kml=True)
+    print(sim_result)
     sim.plot(['att_euler'])
 
 if __name__ == '__main__':

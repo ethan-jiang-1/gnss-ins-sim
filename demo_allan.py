@@ -51,7 +51,8 @@ def test_allan():
                       algorithm=algo)
     sim.run()
     # generate simulation results, summary, and save data to files
-    sim.results()  # save data files
+    sim_result = sim.results()  # save data files
+    print(sim_result)
     # plot data
     sim.plot(['ad_accel', 'ad_gyro'])
 

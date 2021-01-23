@@ -52,7 +52,8 @@ def test_inclinometer_mahony():
                       algorithm=algo)
     sim.run()
     # generate simulation results, summary, and save data to files
-    sim.results()  # do not save data
+    sim_result = sim.results()  # do not save data
+    print(sim_result)
     # plot data
     sim.plot(['att_euler', 'wb', 'ab'], opt={'att_euler': 'error'})
 

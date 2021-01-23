@@ -60,7 +60,7 @@ def test_free_integration():
     #### start simulation
     sim = ins_sim.Sim([fs, 0.0, 0.0],
                       motion_def_path+"//motion_def-long_drive.csv",
-                      ref_frame=0,
+                      ref_frame=1,
                       imu=imu,
                       mode=None,
                       env=None,
@@ -69,7 +69,9 @@ def test_free_integration():
     sim.run(1)
     # generate simulation results, summary
     # do not save data, generate .kml file
-    sim.results('', err_stats_start=-1, gen_kml=True)
+    sim_result = sim.results('', err_stats_start=-1, gen_kml=True)
+    print(sim_result)
+    #sim.plot(["pos", "vel", "accel", "gyro"])
 
 if __name__ == '__main__':
     test_free_integration()

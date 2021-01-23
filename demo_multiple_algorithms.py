@@ -47,7 +47,8 @@ def test_path_gen():
                       algorithm=[algo1, algo2])
     sim.run(2)
     # save simulation data to files
-    sim.results('')
+    sim_result = sim.results('')
+    print(sim_result)
     # plot data
     sim.plot(['att_euler', 'ab', 'wb'])
 
