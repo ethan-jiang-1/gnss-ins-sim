@@ -75,7 +75,7 @@ def test_free_integration():
     # do not save data since the simulation runs for 1000 times and generates too many results
     sim.results(err_stats_start=-1, gen_kml=True)
     # plot postion error
-    # sim.plot(['pos'], opt={'pos':'error'})
+    sim.plot(['pos'], opt={'pos':'error'})
 
 if __name__ == '__main__':
     test_free_integration()

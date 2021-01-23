@@ -31,7 +31,7 @@ def gen_data_to_files(data_dir, motion_csv_path):
     # start simulation
     sim = ins_sim.Sim([fs, fs_gps, fs_mag],
                       motion_def_path + motion_csv_path,
-                      ref_frame=0,
+                      ref_frame=1,
                       imu=imu,
                       mode=None,
                       env=None,
@@ -72,7 +72,7 @@ def test_gen_data_from_files(data_dir, motion_csv_path):
     #### start simulation
     sim = ins_sim.Sim([fs, 0.0, 0.0],
                       data_dir,
-                      ref_frame=0,
+                      ref_frame=1,
                       imu=None,
                       mode=None,
                       env=None,
@@ -86,7 +86,7 @@ def test_gen_data_from_files(data_dir, motion_csv_path):
 
 if __name__ == '__main__':
     #motion_csv_path = "//motion_def-long_drive.csv"
-    motion_csv_path = "//motion_def-Holland_tunnel.csv"
+    motion_csv_path = "//motion_def-ins.csv"
     #motion_csv_path = "//motion_def-90deg_turn.csv"
     gen_output_dir = './/demo_saved_data//tmp//'
 
