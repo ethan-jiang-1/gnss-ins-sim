@@ -21,6 +21,9 @@ fs = 100.0          # IMU sample frequency
 fs_gps = 10.0       # GPS sample frequency
 fs_mag = fs         # magnetometer sample frequency, not used for now
 
+#def_fname = "//motion_def-90deg_turn.csv"
+def_fname = "//motion_def-ins.csv"
+
 def gen_data_first(data_dir):
     '''
     Generate data that will be used by test_gen_data_from_files()
@@ -30,13 +33,13 @@ def gen_data_first(data_dir):
 
     # start simulation
     sim = ins_sim.Sim([fs, fs_gps, fs_mag],
-                      motion_def_path+"//motion_def-90deg_turn.csv",
-                      ref_frame=0,
+                      motion_def_path+def_fname,
+                      ref_frame=1,
                       imu=imu,
                       mode=None,
                       env=None,
                       algorithm=None)
-    sim.run(10)
+    sim.run(2)
     # save simulation data to files
     sim_result = sim.results(data_dir)
     print(sim_result)
@@ -53,7 +56,7 @@ def test_gen_data_from_files(data_dir):
     Free integration requires initial states (position, velocity and attitude). You should provide
     theses values when you create the algorithm object.
     '''
-    ini_pos_vel_att = np.genfromtxt(motion_def_path+"//motion_def-90deg_turn.csv",\
+    ini_pos_vel_att = np.genfromtxt(motion_def_path+def_fname,\
                                     delimiter=',', skip_header=1, max_rows=1)
     ini_pos_vel_att[0] = ini_pos_vel_att[0] * D2R
     ini_pos_vel_att[1] = ini_pos_vel_att[1] * D2R
@@ -69,7 +72,7 @@ def test_gen_data_from_files(data_dir):
     #### start simulation
     sim = ins_sim.Sim([fs, 0.0, 0.0],
                       data_dir,
-                      ref_frame=0,
+                      ref_frame=1,
                       imu=None,
                       mode=None,
                       env=None,
@@ -79,7 +82,7 @@ def test_gen_data_from_files(data_dir):
     # generate simulation results, summary
     sim_result = sim.results('', err_stats_start=-1, gen_kml=True)
     print(sim_result)
-    sim.plot(['att_euler'])
+    sim.plot(['ref_pos', 'pos', 'ref_vel', 'vel', 'att_euler'])
 
 if __name__ == '__main__':
     dir_of_logged_files = os.path.abspath('.//demo_saved_data//tmp//')
