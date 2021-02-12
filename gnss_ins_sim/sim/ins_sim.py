@@ -410,10 +410,12 @@ class Sim(object):
         Generate data
         '''
         if os.path.isdir(self.data_src):    # gen data from files in a directory
+            print("\n\n##Mode I: gen data from files in a directory", self.data_src)
             self.data_src = os.path.abspath(self.data_src)
             self.__gen_data_from_files()
             self.data_from_files = True
         else: # gen data from motion definitions
+            print("\n\n##Mode II: # gen data from motion definitions", self.data_src)
             self.__gen_data_from_pathgen()
 
     def __gen_data_from_files(self):

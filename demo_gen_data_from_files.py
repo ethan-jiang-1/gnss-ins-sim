@@ -22,14 +22,17 @@ fs_gps = 10.0       # GPS sample frequency
 fs_mag = fs         # magnetometer sample frequency, not used for now
 
 #def_fname = "//motion_def-90deg_turn.csv"
-def_fname = "//motion_def-ins.csv"
+#def_fname = "//motion_def-ins.csv"
+def_fname = "//motion_def-ins-ethan.csv"
 
 def gen_data_first(data_dir):
     '''
     Generate data that will be used by test_gen_data_from_files()
     '''
     # imu model
-    imu = imu_model.IMU(accuracy='mid-accuracy', axis=6, gps=False)
+    #imu = imu_model.IMU(accuracy='mid-accuracy', axis=6, gps=False)
+    # ethan' change
+    imu = imu_model.IMU(accuracy='mid-accuracy', axis=6, gps=True, odo=True)
 
     # start simulation
     sim = ins_sim.Sim([fs, fs_gps, fs_mag],
@@ -39,7 +42,7 @@ def gen_data_first(data_dir):
                       mode=None,
                       env=None,
                       algorithm=None)
-    sim.run(2)
+    sim.run(6)
     # save simulation data to files
     sim_result = sim.results(data_dir)
     print(sim_result)
@@ -78,7 +81,7 @@ def test_gen_data_from_files(data_dir):
                       env=None,
                       algorithm=algo)
     # run the simulation for 1000 times
-    sim.run(1)
+    sim.run(6)
     # generate simulation results, summary
     sim_result = sim.results('', err_stats_start=-1, gen_kml=True)
     print(sim_result)
