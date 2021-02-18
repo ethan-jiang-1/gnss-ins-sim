@@ -17,7 +17,8 @@ from gnss_ins_sim.sim import ins_sim
 D2R = math.pi/180
 
 motion_def_path = os.path.abspath('.//demo_motion_def_files//')
-fs = 200.0          # IMU sample frequency
+#fs = 200.0          # IMU sample frequency
+fs = 100.0          # IMU sample frequency
 
 def test_free_integration():
     '''

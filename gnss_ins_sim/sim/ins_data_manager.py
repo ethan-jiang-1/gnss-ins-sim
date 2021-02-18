@@ -663,10 +663,13 @@ class InsDataMgr(object):
             for i in self.__all['gps'].data.keys():
                 pos_name = 'gps_' + str(i)
                 heading = np.zeros((self.__all['gps'].data[i].shape[0],))
-                for j in range(self.__all['gps'].data[i].shape[0]):
-                    heading[j] = math.atan2(self.__all['gps'].data[i][j,4],
-                                            self.__all['gps'].data[i][j,3]) * attitude.R2D
-                    self.__all['gps'].data[i][j, 0:3] *= self.__all['gps_visibility'].data[j]
+                try:
+                    for j in range(self.__all['gps'].data[i].shape[0]):
+                        heading[j] = math.atan2(self.__all['gps'].data[i][j,4],
+                                                self.__all['gps'].data[i][j,3]) * attitude.R2D
+                        self.__all['gps'].data[i][j, 0:3] *= self.__all['gps_visibility'].data[j]
+                except:
+                    pass
                 try:
                     max_points = self.__all['gps'].data[i].shape[0] / self.__all['fs_gps'].data
                     kml_gen.kml_gen(data_dir,\

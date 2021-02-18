@@ -91,6 +91,10 @@ def test_gen_data_from_files(data_dir):
     sim.plot(['ref_pos', 'pos', 'ref_vel', 'vel', 'att_euler'])
 
 if __name__ == '__main__':
-    dir_of_logged_files = os.path.abspath('.//demo_saved_data//tmp//')
+    dir_of_logged_files = os.path.abspath('.//demo_saved_data//no_sim//')
+
+    import shutil
+    if os.path.isdir(dir_of_logged_files):
+        shutil.rmtree(dir_of_logged_files)
     gen_data_first(dir_of_logged_files)
-    test_gen_data_from_files(dir_of_logged_files)
+    #test_gen_data_from_files(dir_of_logged_files)

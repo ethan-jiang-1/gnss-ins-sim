@@ -50,7 +50,7 @@ def test_path_gen():
     sim_result = sim.results('')
     print(sim_result)
     # plot data
-    sim.plot(['att_euler', 'ab', 'wb'])
+    sim.plot(['att_euler', 'att_quat', 'gyro', 'accel', 'ref_pos', 'ref_vel', 'ab', 'wb'])
 
 if __name__ == '__main__':
     test_path_gen()
