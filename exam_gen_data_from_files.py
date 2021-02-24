@@ -21,15 +21,10 @@ fs = 100.0          # IMU sample frequency
 fs_gps = 10.0       # GPS sample frequency
 fs_mag = fs         # magnetometer sample frequency, not used for now
 
-#def_fname = "//motion_def-90deg_turn.csv"
-#def_fname = "//motion_def-ins.csv"
-#def_fname = "//motion_def-ins-ethan.csv"
-#def_fname = "//motion_def-90deg_turn.csv"
-def_fname = "//motion_def-ethan-forward.csv"
 
 ref_frame = 1
 
-def get_ini_pos_vel_att():
+def get_ini_pos_vel_att(def_fname):
     ini_pos_vel_att = np.genfromtxt(motion_def_path+def_fname, delimiter=',', skip_header=1, max_rows=1)
     print("ini_pos_vel_att 0(deg)\n", ini_pos_vel_att)
 
@@ -44,14 +39,25 @@ def get_ini_pos_vel_att():
     print("ini_pos_vel_att 1(rds)\n", ini_pos_vel_att)
     return ini_pos_vel_att
 
-def gen_base_data(data_dir):
+def get_imu(imu_type):
+    #imu = imu_model.IMU(accuracy='mid-accuracy', axis=6, gps=False)
+    # ethan' change
+    if imu_type == "h":
+        return imu_model.IMU(accuracy='high-accuracy', axis=6, gps=True, odo=True)
+    elif imu_type == "m":
+        return imu_model.IMU(accuracy='high-accuracy', axis=6, gps=True, odo=True)
+    elif imu_type == "l":
+        return imu_model.IMU(accuracy='high-accuracy', axis=6, gps=True, odo=True)
+    else:
+        raise ValueError("not-support")
+
+
+def gen_base_data(def_fname, imu_type, data_dir, num_run):
     '''
     Generate data that will be used by test_gen_data_from_files()
     '''
     # imu model
-    #imu = imu_model.IMU(accuracy='mid-accuracy', axis=6, gps=False)
-    # ethan' change
-    imu = imu_model.IMU(accuracy='mid-accuracy', axis=6, gps=True, odo=True)
+    imu = get_imu(imu_type)
 
     # start simulation
     sim = ins_sim.Sim([fs, fs_gps, fs_mag],
@@ -61,14 +67,14 @@ def gen_base_data(data_dir):
                       mode=None,
                       env=None,
                       algorithm=None)
-    sim.run(1)
+    sim.run(num_run)
     # save simulation data to files
     sim_result = sim.results(data_dir)
     print(sim_result)
     #sim.plot(['ref_accel', 'accel', 'ref_gyro', 'gyro', 'ref_pos','ref_att_quat', 'ref_vel'])
 
 
-def gen_intergration_data_from_files(data_dir, output_dir):
+def gen_intergration_data_from_files(def_fname, data_dir, output_dir, num_run):
     '''
     test data generation from files.
     '''
@@ -80,7 +86,7 @@ def gen_intergration_data_from_files(data_dir, output_dir):
     Free integration requires initial states (position, velocity and attitude). You should provide
     theses values when you create the algorithm object.
     '''
-    ini_pos_vel_att = get_ini_pos_vel_att()
+    ini_pos_vel_att = get_ini_pos_vel_att(def_fname)
 
     # create the algorith object
     # free_integration.FreeIntegration: Integrate gyro to get attitude, double integrate linear acceleration to get position.
@@ -96,23 +102,34 @@ def gen_intergration_data_from_files(data_dir, output_dir):
                       algorithm=algo,
                       gen_gt=True)
     # run the simulation for 1000 times
-    sim.run_intergration(1)
+    sim.run_intergration(num_run)
     # generate simulation results, summary
     sim_result = sim.results(output_dir, err_stats_start=-1, gen_kml=True)
     print(sim_result)
-    sim.plot(['ref_accel', 'gt_accel', 'accel', 'ref_gyro', 'gt_gyro', 'gyro'])
+    #sim.plot(['ref_accel', 'gt_accel', 'accel', 'ref_gyro', 'gt_gyro', 'gyro'])
     #sim.plot(['ref_att_quat', 'gt_att_quat', 'att_quat'])
     #sim.plot(['ref_pos', 'gt_pos', 'pos', 'ref_att_quat', 'gt_att_quat', 'att_quat'])
     #sim.plot(['ref_vel', 'gt_vel', 'vel'])
 
 
 if __name__ == '__main__':
+    #def_fname = "//motion_def-90deg_turn.csv"
+    #def_fname = "//motion_def-ins.csv"
+    #def_fname = "//motion_def-ins-ethan.csv"
+    #def_fname = "//motion_def-90deg_turn.csv"
+
+    movement_name = "smpfwd"
+    num_run = 3
+    imu_type = "l"
+
+    def_fname = "//motion_def-x-{}.csv".format(movement_name)
+
     dir_of_logged_files = os.path.abspath('.//x_sim_output//tmp//')
-    dir_of_output_files = os.path.abspath('.//x_sim_output//output//')
+    dir_of_output_files = os.path.abspath('.//x_sim_output//{}-{}_{}//'.format(movement_name, imu_type, num_run))
 
     import shutil
     if os.path.isdir(dir_of_logged_files):
         shutil.rmtree(dir_of_logged_files)
-    gen_base_data(dir_of_logged_files)
-    gen_intergration_data_from_files(dir_of_logged_files, dir_of_output_files)
+    gen_base_data(def_fname, imu_type, dir_of_logged_files, num_run)
+    gen_intergration_data_from_files(def_fname, dir_of_logged_files, dir_of_output_files, num_run)
  
