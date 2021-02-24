@@ -118,18 +118,17 @@ if __name__ == '__main__':
     #def_fname = "//motion_def-ins-ethan.csv"
     #def_fname = "//motion_def-90deg_turn.csv"
 
-    movement_name = "smpfwd"
+    movement_name = "circleRW"
     num_run = 3
-    imu_type = "l"
+    for imu_type in ["h", "m", "l"]:
+        def_fname = "//motion_def-x-{}.csv".format(movement_name)
 
-    def_fname = "//motion_def-x-{}.csv".format(movement_name)
+        dir_of_logged_files = os.path.abspath('.//x_sim_output//tmp//')
+        dir_of_output_files = os.path.abspath('.//x_sim_output//{}-{}_{}//'.format(movement_name, imu_type, num_run))
 
-    dir_of_logged_files = os.path.abspath('.//x_sim_output//tmp//')
-    dir_of_output_files = os.path.abspath('.//x_sim_output//{}-{}_{}//'.format(movement_name, imu_type, num_run))
-
-    import shutil
-    if os.path.isdir(dir_of_logged_files):
-        shutil.rmtree(dir_of_logged_files)
-    gen_base_data(def_fname, imu_type, dir_of_logged_files, num_run)
-    gen_intergration_data_from_files(def_fname, dir_of_logged_files, dir_of_output_files, num_run)
- 
+        import shutil
+        if os.path.isdir(dir_of_logged_files):
+            shutil.rmtree(dir_of_logged_files)
+        gen_base_data(def_fname, imu_type, dir_of_logged_files, num_run)
+        gen_intergration_data_from_files(def_fname, dir_of_logged_files, dir_of_output_files, num_run)
+    

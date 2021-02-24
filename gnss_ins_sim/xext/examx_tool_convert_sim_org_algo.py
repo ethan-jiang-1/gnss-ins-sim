@@ -125,7 +125,9 @@ def do_split_sdir(name):
 
 
 if __name__ == '__main__':
-    names = ["smpfwd-l_3"]
+    names = ["circleRW-h_3",
+             "circleRW-m_3",
+             "circleRW-l_3"]
 
     for name in names:
         do_split_sdir(name)
