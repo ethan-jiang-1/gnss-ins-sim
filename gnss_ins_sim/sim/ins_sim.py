@@ -18,9 +18,9 @@ from ..attitude import attitude
 from ..geoparams import geoparams
 
 from gnss_ins_sim.sim import imu_model
-from .xaux import XEnv
-from .xaux import XPlot
-from .xcsc import prompt_blue, prompt_cyan, prompt_yellow
+from gnss_ins_sim.xext.xaux import XEnv
+from gnss_ins_sim.xext.xaux import XPlot
+from gnss_ins_sim.xext.xcsc import prompt_blue, prompt_cyan, prompt_yellow
 
 # version info
 NAME = 'gnss-ins-sim'
@@ -152,6 +152,8 @@ class Sim(object):
         self.data_map = {\
             self.dmgr.ref_att_euler.name: [self.dmgr.ref_att_quat.name, self.__quat2euler_zyx],
             self.dmgr.ref_att_quat.name: [self.dmgr.ref_att_euler.name, self.__euler2quat_zyx],
+            self.dmgr.gt_att_euler.name: [self.dmgr.gt_att_quat.name, self.__quat2euler_zyx],
+            self.dmgr.gt_att_quat.name: [self.dmgr.gt_att_euler.name, self.__euler2quat_zyx],
             self.dmgr.att_euler.name: [self.dmgr.att_quat.name, self.__quat2euler_zyx],
             self.dmgr.att_quat.name: [self.dmgr.att_euler.name, self.__euler2quat_zyx]}
 
@@ -183,6 +185,28 @@ class Sim(object):
         self.__gen_data()
 
         #### run algorithms
+        #self.__run_algo()
+
+        # simulation complete successfully
+        self.sim_complete = True
+
+        #### generate associated data
+        self.__add_associated_data_to_results()
+
+    def run_intergration(self, num_times=1):
+        '''
+        run simulation.
+        Args:
+            num_times: run the simulation for num_times times with given IMU error model.
+        '''
+        self.sim_count = int(num_times)
+        if self.sim_count < 1:
+            self.sim_count = 1
+
+        #### generate sensor data from file or pathgen
+        self.__gen_data()
+
+        #### run algorithms
         self.__run_algo()
 
         # simulation complete successfully
@@ -198,7 +222,7 @@ class Sim(object):
             self.dmgr.set_algo_output(self.amgr.output)
             # get algo input data
             algo_input = self.dmgr.get_data(self.amgr.input)
-            if XEnv.get_inspect_data():
+            if XEnv.get_inspect_raw_data():
                 prompt_blue("self.amgr.input", self.amgr.input)
                 prompt_blue("self.amgr.output", self.amgr.output)
             # run the algo and get algo output
@@ -221,15 +245,18 @@ class Sim(object):
                     name = "gt_accel"
                 gt_input.append(name)
             gt_output = ['vel', 'pos', 'att_euler']
-            if XEnv.get_inspect_data():
+            if XEnv.get_inspect_raw_data():
                 prompt_blue("gt_input", gt_input)
                 prompt_blue("gt_output", gt_output)                
             self.dmgr.set_algo_output(gt_output)
+            
+            for i in range(len(gt_output)):
+                gt_output[i] = "gt_" + gt_output[i]
+            self.dmgr.set_algo_output(gt_output)
+
             # get algo input data
             gt_algo_input = self.dmgr.get_data(gt_input)
             gt_algo_output = self.amgr.run_algo(gt_algo_input, range(self.sim_count), mark_step="ground-truth")
-            for i in range(len(gt_output)):
-                gt_output[i] = "gt_" + gt_output[i]
             # add algo output to ins_data_manager
             for i in range(len(self.amgr.output)):
                 self.dmgr.add_data(gt_output[i], gt_algo_output[i])            
@@ -543,7 +570,7 @@ class Sim(object):
         # montion_def   -- path info: command type,yaw (deg),pitch (deg),roll (deg),vx_body (m/s),vy_body (m/s),vz_body (m/s),command duration (s),GPS visibility
         # output_def    -- [[simulation_over_sample_rate imu_freq]; [1 gps_freq] [1 odo_freq]]
         # mobility      -- [max_acceleration, max_angular_acceleration, max_angular_velocity]
-        if XEnv.get_inspect_data():
+        if XEnv.get_inspect_raw_data():
             print("   ini_pva\n", ini_pva)
             print("motion_def\n", motion_def)
             print("outout_def\n", output_def)
@@ -558,7 +585,7 @@ class Sim(object):
                                self.ref_frame, 
                                self.imu.magnetometer)
 
-        if XEnv.get_plot_data():
+        if XEnv.get_plot_raw_data():
             accel = rtn['imu'][:, 1:4]
             XPlot.plot_accel(accel, title="ref_accel")
             gyro = rtn['imu'][:, 4:7]
@@ -582,7 +609,7 @@ class Sim(object):
         # generate sensor data
         # environment-->vibraition params
         vib_def = self.__parse_env(self.env)        
-        if XEnv.get_inspect_data():
+        if XEnv.get_inspect_raw_data():
             print("vib_def\t", vib_def)
             print("accel_err\t", self.imu.accel_err)
             print("gyro_err\t", self.imu.gyro_err)
@@ -597,7 +624,7 @@ class Sim(object):
         gt_gyro = pathgen.gyro_gen(self.fs[0], self.dmgr.ref_gyro.data,
                                 self.imu_gt.gyro_err)
         self.dmgr.add_data(self.dmgr.gt_gyro.name, gt_gyro)
-        if XEnv.get_plot_data():
+        if XEnv.get_plot_raw_data():
             XPlot.plot_accel(gt_accel, title="gt_acc")
             XPlot.plot_gyro(gt_gyro, title="gt_gyro")
 
@@ -621,7 +648,7 @@ class Sim(object):
                 odo = pathgen.odo_gen(self.dmgr.ref_odo.data, self.imu.odo_err)
                 self.dmgr.add_data(self.dmgr.odo.name, odo, key=i)
 
-            if XEnv.get_plot_data():
+            if XEnv.get_plot_raw_data():
                 XPlot.plot_accel(accel, title="sim_acc@{}".format(i))
                 XPlot.plot_gyro(gyro, title="sim_gyro@{}".format(i))
 

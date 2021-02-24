@@ -8,7 +8,7 @@ Created on 2018-04-28
 """
 
 import copy
-from gnss_ins_sim.sim.xcsc import prompt_cyan
+from gnss_ins_sim.xext.xcsc import prompt_cyan
 
 class InsAlgoMgr(object):
     '''

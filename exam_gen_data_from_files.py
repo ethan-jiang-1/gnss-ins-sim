@@ -68,7 +68,7 @@ def gen_base_data(data_dir):
     #sim.plot(['ref_accel', 'accel', 'ref_gyro', 'gyro', 'ref_pos','ref_att_quat', 'ref_vel'])
 
 
-def gen_intergration_data_from_files(data_dir):
+def gen_intergration_data_from_files(data_dir, output_dir):
     '''
     test data generation from files.
     '''
@@ -96,19 +96,23 @@ def gen_intergration_data_from_files(data_dir):
                       algorithm=algo,
                       gen_gt=True)
     # run the simulation for 1000 times
-    sim.run(1)
+    sim.run_intergration(1)
     # generate simulation results, summary
-    sim_result = sim.results('', err_stats_start=-1, gen_kml=True)
+    sim_result = sim.results(output_dir, err_stats_start=-1, gen_kml=True)
     print(sim_result)
-    sim.plot(['ref_accel', 'gt_accel', 'accel', 'ref_gyro', 'gt_gyro', 'gyro', 'ref_pos', 'gt_pos', 'pos', 'ref_att_quat', 'att_quat', 'ref_vel', 'gt_vel', 'vel'])
+    sim.plot(['ref_accel', 'gt_accel', 'accel', 'ref_gyro', 'gt_gyro', 'gyro'])
+    #sim.plot(['ref_att_quat', 'gt_att_quat', 'att_quat'])
+    #sim.plot(['ref_pos', 'gt_pos', 'pos', 'ref_att_quat', 'gt_att_quat', 'att_quat'])
+    #sim.plot(['ref_vel', 'gt_vel', 'vel'])
 
 
 if __name__ == '__main__':
-    dir_of_logged_files = os.path.abspath('.//demo_saved_data//exam//')
+    dir_of_logged_files = os.path.abspath('.//x_sim_output//tmp//')
+    dir_of_output_files = os.path.abspath('.//x_sim_output//output//')
 
     import shutil
     if os.path.isdir(dir_of_logged_files):
         shutil.rmtree(dir_of_logged_files)
     gen_base_data(dir_of_logged_files)
-    gen_intergration_data_from_files(dir_of_logged_files)
+    gen_intergration_data_from_files(dir_of_logged_files, dir_of_output_files)
  

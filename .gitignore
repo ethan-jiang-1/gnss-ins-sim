@@ -15,3 +15,5 @@ __pycache__/
 
 # mag calibration algorithm camke dir
 /demo_algorithms/mag_calibrate_src/cmake/
+
+x_sim_output

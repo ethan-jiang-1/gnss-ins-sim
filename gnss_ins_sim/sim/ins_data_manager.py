@@ -14,8 +14,8 @@ from .sim_data import Sim_data
 from ..attitude import attitude
 from ..kml_gen import kml_gen
 from ..geoparams import geoparams
-from .xaux import XEnv
-from .xcsc import prompt_blue
+from gnss_ins_sim.xext.xaux import XEnv
+from gnss_ins_sim.xext.xcsc import prompt_blue
 
 class InsDataMgr(object):
     '''
@@ -212,28 +212,28 @@ class InsDataMgr(object):
                              description='gt gyro measurements',\
                              units=['rad/s', 'rad/s', 'rad/s'],\
                              output_units=['deg/s', 'deg/s', 'deg/s'],\
-                             legend=['gyro_x', 'gyro_y', 'gyro_z'])
+                             legend=['gt_gyro_x', 'gt_gyro_y', 'gt_gyro_z'])
         self.gt_accel = Sim_data(name='gt_accel',\
                               description='gt accel measurements',\
                               units=['m/s^2', 'm/s^2', 'm/s^2'],\
-                              legend=['accel_x', 'accel_y', 'accel_z'])
+                              legend=['gt_accel_x', 'gt_accel_y', 'gt_accel_z'])
         self.gt_pos = Sim_data(name='gt_pos',\
                             description='gt simulation position from algo',\
                             units=['rad', 'rad', 'm'],\
                             output_units=['deg', 'deg', 'm'],\
-                            legend=['pos_lat', 'pos_lon', 'pos_alt'])
+                            legend=['gt_pos_lat', 'gt_pos_lon', 'gt_pos_alt'])
         self.gt_att_euler = Sim_data(name='gt_att_euler',\
                                 description='gt true attitude (Euler angles, ZYX)',\
                                 units=['rad', 'rad', 'rad'],\
                                 output_units=['deg', 'deg', 'deg'],\
-                                legend=['ref_Yaw', 'ref_Pitch', 'ref_Roll'])
+                                legend=['gt_Yaw', 'gt_Pitch', 'gt_Roll'])
         self.gt_att_quat = Sim_data(name='gt_att_quat',\
                                      description='gt true attitude (quaternion)',\
-                                     legend=['q0', 'q1', 'q2', 'q3'])
+                                     legend=['gt_q0', 'gt_q1', 'gt_q2', 'gt_q3'])
         self.gt_vel = Sim_data(name='gt_vel',\
                             description='gt simulation velocity from algo',\
                             units=['m/s', 'm/s', 'm/s'],\
-                            legend=['vel_x', 'vel_y', 'vel_z'])
+                            legend=['gt_vel_x', 'gt_vel_y', 'gt_vel_z'])
 
         # if using virtual inertial frame
         if self.ref_frame.data == 1:
@@ -360,7 +360,7 @@ class InsDataMgr(object):
                 each value in the dict is a scalar or a numpy array.
         '''
         if data_name in self.__all:
-            if XEnv.get_inspect_data():
+            if XEnv.get_inspect_raw_data():
                 prompt_blue("InsDataMgr.add_data", data_name)  # , data, key, units)
             self.__all[data_name].add_data(data, key, units)
             if data_name not in self.available:

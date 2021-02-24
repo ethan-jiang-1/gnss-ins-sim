@@ -2,16 +2,16 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 class XEnv(object):
-    inspect_data = True
-    plot_data = True
+    inspect_raw_data = True
+    plot_raw_data = False
 
     @classmethod
-    def get_inspect_data(cls):
-        return cls.inspect_data
+    def get_inspect_raw_data(cls):
+        return cls.inspect_raw_data
 
     @classmethod
-    def get_plot_data(cls):
-        return cls.plot_data
+    def get_plot_raw_data(cls):
+        return cls.plot_raw_data
 
 
 
