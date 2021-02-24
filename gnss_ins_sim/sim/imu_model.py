@@ -59,6 +59,20 @@ gps_low_accuracy = {'stdp': np.array([5.0, 5.0, 7.0]),
 ## built-in odometer error profiles
 odo_low_accuracy = {'scale': 0.99,
                     'stdv': 0.1}
+
+# gt accuracy
+gyro_gt_accuracy = {'b': np.array([0.0, 0.0, 0.0]) * D2R,
+                      'b_drift': np.array([0.001, 0.001, 0.001]) * D2R/3600.0,
+                      'b_corr':np.array([100.0, 100.0, 100.0]),
+                      'arw': np.array([2.0e-5, 2.0e-5, 2.0e-5]) * D2R/60}
+accel_gt_accuracy = {'b': np.array([0.0e-3, 0.0e-3, 0.0e-3]),
+                       'b_drift': np.array([3.6e-8, 3.6e-8, 3.6e-8]),
+                       'b_corr': np.array([100.0, 100.0, 100.0]),
+                       'vrw': np.array([2.5e-7, 2.5e-7, 2.5e-7]) / 60}
+mag_gt_accuracy = {'si': np.eye(3) + np.random.randn(3, 3)*0.0,
+                     'hi': np.array([10.0, 10.0, 10.0])*0.0,
+                     'std': np.array([0.00001, 0.00001, 0.00001])}
+
 class IMU(object):
     '''
     IMU class
@@ -99,6 +113,10 @@ class IMU(object):
                 'scale': scale factor
                 'stdv': velocity measurement noise, meters/second.
         '''
+        self.axis = axis
+        self.gps = gps
+        self.odo = odo 
+
         # check axis
         self.magnetometer = False
         if axis == 9:
@@ -123,6 +141,10 @@ class IMU(object):
                 self.gyro_err = gyro_high_accuracy
                 self.accel_err = accel_high_accuracy
                 self.mag_err = mag_high_accuracy
+            elif accuracy == "gt-accuracy":
+                self.gyro_err = gyro_gt_accuracy
+                self.accel_err = accel_gt_accuracy
+                self.mag_err = mag_gt_accuracy
             else:                                           # not a valid string
                 raise ValueError('accuracy is not a valid string.')
         # accuracy is a dict, user defined models

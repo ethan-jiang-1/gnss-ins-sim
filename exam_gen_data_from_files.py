@@ -24,11 +24,27 @@ fs_mag = fs         # magnetometer sample frequency, not used for now
 #def_fname = "//motion_def-90deg_turn.csv"
 #def_fname = "//motion_def-ins.csv"
 #def_fname = "//motion_def-ins-ethan.csv"
-def_fname = "//motion_def-90deg_turn.csv"
+#def_fname = "//motion_def-90deg_turn.csv"
+def_fname = "//motion_def-ethan-forward.csv"
 
 ref_frame = 1
 
-def gen_data_first(data_dir):
+def get_ini_pos_vel_att():
+    ini_pos_vel_att = np.genfromtxt(motion_def_path+def_fname, delimiter=',', skip_header=1, max_rows=1)
+    print("ini_pos_vel_att 0(deg)\n", ini_pos_vel_att)
+
+    ini_pos_vel_att[0] = ini_pos_vel_att[0] * D2R
+    ini_pos_vel_att[1] = ini_pos_vel_att[1] * D2R
+    ini_pos_vel_att[6:9] = ini_pos_vel_att[6:9] * D2R
+    # add initial states error if needed
+    ini_vel_err = np.array([0.0, 0.0, 0.0]) # initial velocity error in the body frame, m/s
+    ini_att_err = np.array([0.0, 0.0, 0.0]) # initial Euler angles error, deg
+    ini_pos_vel_att[3:6] += ini_vel_err
+    ini_pos_vel_att[6:9] += ini_att_err * D2R
+    print("ini_pos_vel_att 1(rds)\n", ini_pos_vel_att)
+    return ini_pos_vel_att
+
+def gen_base_data(data_dir):
     '''
     Generate data that will be used by test_gen_data_from_files()
     '''
@@ -45,12 +61,14 @@ def gen_data_first(data_dir):
                       mode=None,
                       env=None,
                       algorithm=None)
-    sim.run(3)
+    sim.run(1)
     # save simulation data to files
     sim_result = sim.results(data_dir)
     print(sim_result)
+    #sim.plot(['ref_accel', 'accel', 'ref_gyro', 'gyro', 'ref_pos','ref_att_quat', 'ref_vel'])
 
-def test_gen_data_from_files(data_dir):
+
+def gen_intergration_data_from_files(data_dir):
     '''
     test data generation from files.
     '''
@@ -62,17 +80,10 @@ def test_gen_data_from_files(data_dir):
     Free integration requires initial states (position, velocity and attitude). You should provide
     theses values when you create the algorithm object.
     '''
-    ini_pos_vel_att = np.genfromtxt(motion_def_path+def_fname,\
-                                    delimiter=',', skip_header=1, max_rows=1)
-    ini_pos_vel_att[0] = ini_pos_vel_att[0] * D2R
-    ini_pos_vel_att[1] = ini_pos_vel_att[1] * D2R
-    ini_pos_vel_att[6:9] = ini_pos_vel_att[6:9] * D2R
-    # add initial states error if needed
-    ini_vel_err = np.array([0.0, 0.0, 0.0]) # initial velocity error in the body frame, m/s
-    ini_att_err = np.array([0.0, 0.0, 0.0]) # initial Euler angles error, deg
-    ini_pos_vel_att[3:6] += ini_vel_err
-    ini_pos_vel_att[6:9] += ini_att_err * D2R
+    ini_pos_vel_att = get_ini_pos_vel_att()
+
     # create the algorith object
+    # free_integration.FreeIntegration: Integrate gyro to get attitude, double integrate linear acceleration to get position.
     algo = free_integration.FreeIntegration(ini_pos_vel_att)
 
     #### start simulation
@@ -82,19 +93,22 @@ def test_gen_data_from_files(data_dir):
                       imu=None,
                       mode=None,
                       env=None,
-                      algorithm=algo)
+                      algorithm=algo,
+                      gen_gt=True)
     # run the simulation for 1000 times
-    sim.run(3)
+    sim.run(1)
     # generate simulation results, summary
     sim_result = sim.results('', err_stats_start=-1, gen_kml=True)
     print(sim_result)
-    sim.plot(['ref_pos', 'pos', 'ref_vel', 'vel', 'att_euler'])
+    sim.plot(['ref_accel', 'gt_accel', 'accel', 'ref_gyro', 'gt_gyro', 'gyro', 'ref_pos', 'gt_pos', 'pos', 'ref_att_quat', 'att_quat', 'ref_vel', 'gt_vel', 'vel'])
+
 
 if __name__ == '__main__':
-    dir_of_logged_files = os.path.abspath('.//demo_saved_data//no_sim//')
+    dir_of_logged_files = os.path.abspath('.//demo_saved_data//exam//')
 
     import shutil
     if os.path.isdir(dir_of_logged_files):
         shutil.rmtree(dir_of_logged_files)
-    gen_data_first(dir_of_logged_files)
-    #test_gen_data_from_files(dir_of_logged_files)
+    gen_base_data(dir_of_logged_files)
+    gen_intergration_data_from_files(dir_of_logged_files)
+ 

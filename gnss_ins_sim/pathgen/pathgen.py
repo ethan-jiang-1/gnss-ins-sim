@@ -156,6 +156,7 @@ def path_gen(ini_pos_vel_att, motion_def, output_def, mobility, ref_frame=0, mag
     pos_n = ini_pos_vel_att[0:3]                # ini pos, LLA
     vel_b = ini_pos_vel_att[3:6]                # ini vel
     att = ini_pos_vel_att[6:9]                  # ini att
+    
     c_nb = attitude.euler2dcm(att, 'zyx').T     # b to n
     vel_n = c_nb.dot(vel_b)
     pos_delta_n = np.zeros(3)                   # pos change
@@ -246,6 +247,7 @@ def path_gen(ini_pos_vel_att, motion_def, output_def, mobility, ref_frame=0, mag
                 acc_avg = acc_sum / sim_osr
                 gyro_avg = gyro_sum / sim_osr
                 # write to files
+
                 #imu_data[idx_high_freq, :] = np.hstack((idx_high_freq, acc_avg, gyro_avg))
                 imu_data[idx_high_freq, 0] = sim_count
                 imu_data[idx_high_freq, 1] = acc_avg[0]
@@ -254,6 +256,7 @@ def path_gen(ini_pos_vel_att, motion_def, output_def, mobility, ref_frame=0, mag
                 imu_data[idx_high_freq, 4] = gyro_avg[0]
                 imu_data[idx_high_freq, 5] = gyro_avg[1]
                 imu_data[idx_high_freq, 6] = gyro_avg[2]
+
                 # nav data
                 nav_data[idx_high_freq, 0] = sim_count
                 nav_data[idx_high_freq, 1] = pos_n[0] + pos_delta_n[0]
@@ -266,6 +269,7 @@ def path_gen(ini_pos_vel_att, motion_def, output_def, mobility, ref_frame=0, mag
                 nav_data[idx_high_freq, 7] = euler_angles[0] # yaw [-pi, pi]
                 nav_data[idx_high_freq, 8] = euler_angles[1] # pitch [-pi/2, pi/2]
                 nav_data[idx_high_freq, 9] = euler_angles[2] # roll [-pi, pi]
+
                 # next cycle
                 acc_sum = np.zeros(3)
                 gyro_sum = np.zeros(3)

@@ -8,6 +8,7 @@ Created on 2018-04-28
 """
 
 import copy
+from gnss_ins_sim.sim.xcsc import prompt_cyan
 
 class InsAlgoMgr(object):
     '''
@@ -36,7 +37,7 @@ class InsAlgoMgr(object):
         if self.algo is not None:
             self.__check_algo()
 
-    def run_algo(self, input_data, keys=None):
+    def run_algo(self, input_data, keys=None, mark_step=None):
         '''
         Run the algorithm with given input
         Args:
@@ -53,6 +54,7 @@ class InsAlgoMgr(object):
                 a dict with keys 'algorithm_name' + '_' + 'simulation run'. For example:
                 algo0_0, algo0_1, algo1_0, algo1_1, ......
         '''
+        prompt_cyan("run_algo", mark_step)
         if len(input_data) != self.nin:
             raise ValueError('Required %s input, but provide %s.'% (self.nin, len(input_data)))
         #### call the algorithm
@@ -87,7 +89,8 @@ class InsAlgoMgr(object):
                                             % (input_data[j].keys(), key))
                     else:
                         set_of_input.append(input_data[j])
-                self.algo[i].run(copy.deepcopy(set_of_input))   # deepcopy to avoid being changed
+                cp_set_of_input = copy.deepcopy(set_of_input)
+                self.algo[i].run(cp_set_of_input)   # deepcopy to avoid being changed
                 # get algorithm output of this run
                 this_results = self.algo[i].get_results()
                 # add algorithm output of this run to results

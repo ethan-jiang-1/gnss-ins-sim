@@ -17,6 +17,11 @@ from ..pathgen import pathgen
 from ..attitude import attitude
 from ..geoparams import geoparams
 
+from gnss_ins_sim.sim import imu_model
+from .xaux import XEnv
+from .xaux import XPlot
+from .xcsc import prompt_blue, prompt_cyan, prompt_yellow
+
 # version info
 NAME = 'gnss-ins-sim'
 VERSION = '3.0.0_alpha'
@@ -24,12 +29,13 @@ VERSION = '3.0.0_alpha'
 # built-in mobility
 high_mobility = np.array([1.0, 0.5, 2.0])   # m/s/s, rad/s/s, rad/s
 
+
 class Sim(object):
     '''
     INS simulation engine.
     '''
     def __init__(self, fs, motion_def, ref_frame=0, imu=None,\
-                 mode=None, env=None, algorithm=None):
+                 mode=None, env=None, algorithm=None, gen_gt=False):
         '''
         Args:
             fs: [fs_imu, fs_gps, fs_mag], Hz.
@@ -127,6 +133,9 @@ class Sim(object):
             self.ref_frame = ref_frame
         else:
             self.ref_frame = 0      # default frame is NED
+        self.gen_gt = gen_gt
+        self._create_gt_imu()
+
         # simulation status
         self.sim_count = 1          # simulation count
         self.sim_complete = False   # simulation complete successfully
@@ -153,6 +162,12 @@ class Sim(object):
 
         # summary
         self.sum = ''
+        self.gen_data_mode = None
+
+    def _create_gt_imu(self):
+        imu = self.imu
+        if imu is not None:
+            self.imu_gt = imu_model.IMU(accuracy='gt-accuracy', axis=imu.axis, gps=imu.gps, odo=imu.odo)
 
     def run(self, num_times=1):
         '''
@@ -168,21 +183,58 @@ class Sim(object):
         self.__gen_data()
 
         #### run algorithms
-        if self.amgr.algo is not None:
-            # tell data manager the output of the algorithm
-            self.dmgr.set_algo_output(self.amgr.output)
-            # get algo input data
-            algo_input = self.dmgr.get_data(self.amgr.input)
-            # run the algo and get algo output
-            algo_output = self.amgr.run_algo(algo_input, range(self.sim_count))
-            # add algo output to ins_data_manager
-            for i in range(len(self.amgr.output)):
-                self.dmgr.add_data(self.amgr.output[i], algo_output[i])
+        self.__run_algo()
+
         # simulation complete successfully
         self.sim_complete = True
 
         #### generate associated data
         self.__add_associated_data_to_results()
+
+    def __run_algo(self):
+        if self.amgr.algo is not None:
+            prompt_cyan("__run_algo(nm)", self.gen_data_mode)
+            # tell data manager the output of the algorithm
+            self.dmgr.set_algo_output(self.amgr.output)
+            # get algo input data
+            algo_input = self.dmgr.get_data(self.amgr.input)
+            if XEnv.get_inspect_data():
+                prompt_blue("self.amgr.input", self.amgr.input)
+                prompt_blue("self.amgr.output", self.amgr.output)
+            # run the algo and get algo output
+            algo_output = self.amgr.run_algo(algo_input, range(self.sim_count), mark_step="normal")
+            # add algo output to ins_data_manager
+            for i in range(len(self.amgr.output)):
+                self.dmgr.add_data(self.amgr.output[i], algo_output[i])
+            if self.gen_data_mode == "2B:__gen_data_gt_from_files":
+                self.__run_aglo_gt()
+    
+    def __run_aglo_gt(self):
+        if self.amgr.algo is not None:
+            prompt_cyan("__run_algo(gt)", self.gen_data_mode)
+            gt_input = []
+            for i in range(len(self.amgr.input)):
+                name = self.amgr.input[i]
+                if name == "gyro":
+                    name = "gt_gyro"
+                elif name == "accel":
+                    name = "gt_accel"
+                gt_input.append(name)
+            gt_output = ['vel', 'pos', 'att_euler']
+            if XEnv.get_inspect_data():
+                prompt_blue("gt_input", gt_input)
+                prompt_blue("gt_output", gt_output)                
+            self.dmgr.set_algo_output(gt_output)
+            # get algo input data
+            gt_algo_input = self.dmgr.get_data(gt_input)
+            gt_algo_output = self.amgr.run_algo(gt_algo_input, range(self.sim_count), mark_step="ground-truth")
+            for i in range(len(gt_output)):
+                gt_output[i] = "gt_" + gt_output[i]
+            # add algo output to ins_data_manager
+            for i in range(len(self.amgr.output)):
+                self.dmgr.add_data(gt_output[i], gt_algo_output[i])            
+
+           
 
     def results(self, data_dir=None, err_stats_start=0, gen_kml=False, extra_opt=''):
         '''
@@ -410,13 +462,23 @@ class Sim(object):
         Generate data
         '''
         if os.path.isdir(self.data_src):    # gen data from files in a directory
-            print("\n\n##Mode I: gen data from files in a directory", self.data_src)
-            self.data_src = os.path.abspath(self.data_src)
-            self.__gen_data_from_files()
-            self.data_from_files = True
+            if not self.gen_gt:
+                prompt_yellow("\n\n##Mode IIA: gen data from files in a directory: __gen_data_from_files", self.data_src)
+                self.data_src = os.path.abspath(self.data_src)
+                self.__gen_data_from_files()
+                self.data_from_files = True
+                self.gen_data_mode = "2A:__gen_data_from_files"
+            else:
+                prompt_yellow("\n\n##Mode IIB: gen data from files in a directory: __gen_data_gt_from_files", self.data_src)
+                self.data_src = os.path.abspath(self.data_src)
+                self.__gen_data_gt_from_files()
+                self.data_from_files = True                
+                self.gen_data_mode = "2B:__gen_data_gt_from_files"
         else: # gen data from motion definitions
-            print("\n\n##Mode II: # gen data from motion definitions", self.data_src)
+            prompt_yellow("\n\n##Mode I: # gen data from motion definitions: __gen_data_from_pathgen", self.data_src)
             self.__gen_data_from_pathgen()
+            self.gen_data_mode = "1:__gen_data_from_pathgen"
+        prompt_cyan("__gen_data", self.gen_data_mode)
 
     def __gen_data_from_files(self):
         '''
@@ -425,6 +487,7 @@ class Sim(object):
         for i in os.listdir(self.data_src):
             data_name, data_key = self.__get_data_name_and_key(i)
             if self.dmgr.is_supported(data_name):
+                print("__gen_data_from_files", data_name, data_key)
                 full_file_name = self.data_src + '//' + i
                 # read data in file
                 data = np.genfromtxt(full_file_name, delimiter=',', skip_header=1)
@@ -436,6 +499,25 @@ class Sim(object):
                 # print([data_name, data_key, units])
                 self.dmgr.add_data(data_name, data, data_key, units)
 
+    def __gen_data_gt_from_files(self):
+        '''
+        Generate data from files
+        '''
+        for i in os.listdir(self.data_src):
+            data_name, data_key = self.__get_data_name_and_key(i)
+            if self.dmgr.is_supported(data_name):
+                print("__gen_data_gt_from_files", data_name, data_key)
+                full_file_name = self.data_src + '//' + i
+                # read data in file
+                data = np.genfromtxt(full_file_name, delimiter=',', skip_header=1)
+                # get data units in file
+                units = self.__get_data_units(full_file_name)
+                # see if position info mathes reference frame
+                if data_name == self.dmgr.ref_pos.name or data_name == self.dmgr.pos.name:
+                    data, units = self.__convert_pos(data, units, self.dmgr.ref_frame.data)
+                # print([data_name, data_key, units])
+                self.dmgr.add_data(data_name, data, data_key, units)
+    
     def __gen_data_from_pathgen(self):
         '''
         Generate data from pathgen.
@@ -457,8 +539,31 @@ class Sim(object):
         mobility = self.__parse_mode(self.mode)
 
         # generate reference data and add data to ins_data_manager
-        rtn = pathgen.path_gen(ini_pva, motion_def, output_def, mobility,
-                               self.ref_frame, self.imu.magnetometer)
+        # ini_pva       -- init info: ini lat (deg),ini lon (deg),ini alt (m),ini vx_body (m/s),ini vy_body (m/s),ini vz_body (m/s),ini yaw (deg),ini pitch (deg),ini roll (deg)
+        # montion_def   -- path info: command type,yaw (deg),pitch (deg),roll (deg),vx_body (m/s),vy_body (m/s),vz_body (m/s),command duration (s),GPS visibility
+        # output_def    -- [[simulation_over_sample_rate imu_freq]; [1 gps_freq] [1 odo_freq]]
+        # mobility      -- [max_acceleration, max_angular_acceleration, max_angular_velocity]
+        if XEnv.get_inspect_data():
+            print("   ini_pva\n", ini_pva)
+            print("motion_def\n", motion_def)
+            print("outout_def\n", output_def)
+            print(" mobility\t", mobility)
+            print("ref_frame\t", self.ref_frame)
+            print("  imu.mag\t", self.imu.magnetometer)
+
+        rtn = pathgen.path_gen(ini_pva, 
+                               motion_def, 
+                               output_def, 
+                               mobility,
+                               self.ref_frame, 
+                               self.imu.magnetometer)
+
+        if XEnv.get_plot_data():
+            accel = rtn['imu'][:, 1:4]
+            XPlot.plot_accel(accel, title="ref_accel")
+            gyro = rtn['imu'][:, 4:7]
+            XPlot.plot_gyro(gyro, title="ref_gyro")
+        
         self.dmgr.add_data(self.dmgr.time.name, rtn['nav'][:, 0] / self.fs[0])
         self.dmgr.add_data(self.dmgr.ref_pos.name, rtn['nav'][:, 1:4])
         self.dmgr.add_data(self.dmgr.ref_vel.name, rtn['nav'][:, 4:7])
@@ -473,16 +578,38 @@ class Sim(object):
             self.dmgr.add_data(self.dmgr.ref_mag.name, rtn['mag'][:, 1:4])
         if self.imu.odo:
             self.dmgr.add_data(self.dmgr.ref_odo.name, rtn['odo'][:, 2])
+
         # generate sensor data
         # environment-->vibraition params
-        vib_def = self.__parse_env(self.env)
+        vib_def = self.__parse_env(self.env)        
+        if XEnv.get_inspect_data():
+            print("vib_def\t", vib_def)
+            print("accel_err\t", self.imu.accel_err)
+            print("gyro_err\t", self.imu.gyro_err)
+            print("gps_err\t", self.imu.gps_err)
+            print("odo_err\t", self.imu.odo_err)
+
+        # ground-truth
+        gt_accel = pathgen.acc_gen(self.fs[0], self.dmgr.ref_accel.data,
+                                self.imu_gt.accel_err, None)
+        self.dmgr.add_data(self.dmgr.gt_accel.name, gt_accel)
+
+        gt_gyro = pathgen.gyro_gen(self.fs[0], self.dmgr.ref_gyro.data,
+                                self.imu_gt.gyro_err)
+        self.dmgr.add_data(self.dmgr.gt_gyro.name, gt_gyro)
+        if XEnv.get_plot_data():
+            XPlot.plot_accel(gt_accel, title="gt_acc")
+            XPlot.plot_gyro(gt_gyro, title="gt_gyro")
+
         for i in range(self.sim_count):
             accel = pathgen.acc_gen(self.fs[0], self.dmgr.ref_accel.data,
                                     self.imu.accel_err, vib_def)
             self.dmgr.add_data(self.dmgr.accel.name, accel, key=i)
+
             gyro = pathgen.gyro_gen(self.fs[0], self.dmgr.ref_gyro.data,\
                                     self.imu.gyro_err)
             self.dmgr.add_data(self.dmgr.gyro.name, gyro, key=i)
+
             if self.imu.gps:
                 gps = pathgen.gps_gen(self.dmgr.ref_gps.data, self.imu.gps_err,\
                                                    self.ref_frame)
@@ -493,6 +620,10 @@ class Sim(object):
             if self.imu.odo:
                 odo = pathgen.odo_gen(self.dmgr.ref_odo.data, self.imu.odo_err)
                 self.dmgr.add_data(self.dmgr.odo.name, odo, key=i)
+
+            if XEnv.get_plot_data():
+                XPlot.plot_accel(accel, title="sim_acc@{}".format(i))
+                XPlot.plot_gyro(gyro, title="sim_gyro@{}".format(i))
 
     def __get_data_name_and_key(self, file_name):
         '''
@@ -719,6 +850,7 @@ class Sim(object):
         For example, pathgen generates Euler angles, this procedure will calculate the
         coresponding quaternions and add those in self.res.
         '''
+        prompt_cyan("__add_associated_data_to_results", self.gen_data_mode)
         for i in self.data_map:
             # data available and its associated data are supported
             src_name = self.data_map[i][0]
