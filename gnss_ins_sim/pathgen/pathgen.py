@@ -442,7 +442,7 @@ def parse_motion_def(motion_def_seg, att, vel):
         vel_com = [motion_def_seg[4], motion_def_seg[5], motion_def_seg[6]]
     return att_com, vel_com
 
-def acc_gen(fs, ref_a, acc_err, vib_def=None):
+def acc_gen(fs, ref_a, acc_err, vib_def=None, vel_base=None):
     """
     Add error to true acc data according to acclerometer model parameters
     Args:
@@ -466,6 +466,8 @@ def acc_gen(fs, ref_a, acc_err, vib_def=None):
                 'x': x axis, in unit of m2/s4/Hz.
                 'y': y axis, in unit of m2/s4/Hz.
                 'z': z axis, in unit of m2/s4/Hz.
+            'type' == 'vel'
+
     Returns:
         a_mea: nx3 measured acc data
     """
@@ -495,6 +497,9 @@ def acc_gen(fs, ref_a, acc_err, vib_def=None):
             acc_vib[:, 0] = vib_def['x'] * np.sin(2.0*math.pi*vib_def['freq']*dt*np.arange(n))
             acc_vib[:, 1] = vib_def['y'] * np.sin(2.0*math.pi*vib_def['freq']*dt*np.arange(n))
             acc_vib[:, 2] = vib_def['z'] * np.sin(2.0*math.pi*vib_def['freq']*dt*np.arange(n))
+        else:
+            raise ValueError("not_supported")
+
     # accelerometer white noise
     acc_noise = np.random.randn(n, 3)
     acc_noise[:, 0] = acc_err['vrw'][0] / math.sqrt(dt) * acc_noise[:, 0]
@@ -504,7 +509,7 @@ def acc_gen(fs, ref_a, acc_err, vib_def=None):
     a_mea = ref_a + acc_bias + acc_bias_drift + acc_noise + acc_vib
     return a_mea
 
-def gyro_gen(fs, ref_w, gyro_err):
+def gyro_gen(fs, ref_w, gyro_err, vel_base=None):
     """
     Add error to true gyro data according to gyroscope model parameters
     Args:
@@ -530,8 +535,13 @@ def gyro_gen(fs, ref_w, gyro_err):
     gyro_noise[:, 0] = gyro_err['arw'][0] / math.sqrt(dt) * gyro_noise[:, 0]
     gyro_noise[:, 1] = gyro_err['arw'][1] / math.sqrt(dt) * gyro_noise[:, 1]
     gyro_noise[:, 2] = gyro_err['arw'][2] / math.sqrt(dt) * gyro_noise[:, 2]
+
+    gyro_vel = np.zeros((n, 3))
+    if vel_base is not None:
+        pass
+
     # true + constant_bias + bias_drift + noise
-    w_mea = ref_w + gyro_bias + gyro_bias_drift + gyro_noise
+    w_mea = ref_w + gyro_bias + gyro_bias_drift + gyro_noise + gyro_vel
     return w_mea
 
 def bias_drift(corr_time, drift, n, fs):

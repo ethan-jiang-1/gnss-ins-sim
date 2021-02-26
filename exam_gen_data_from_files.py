@@ -25,7 +25,7 @@ fs_mag = fs         # magnetometer sample frequency, not used for now
 ref_frame = 1
 
 def get_ini_pos_vel_att(def_fname):
-    ini_pos_vel_att = np.genfromtxt(motion_def_path+def_fname, delimiter=',', skip_header=1, max_rows=1)
+    ini_pos_vel_att = np.genfromtxt(motion_def_path+def_fname, delimiter=',', comments='#', skip_header=1, max_rows=1)
     print("ini_pos_vel_att 0(deg)\n", ini_pos_vel_att)
 
     ini_pos_vel_att[0] = ini_pos_vel_att[0] * D2R
@@ -56,6 +56,9 @@ def gen_base_data(def_fname, imu_type, data_dir, num_run):
     '''
     Generate data that will be used by test_gen_data_from_files()
     '''
+
+    ini_pos_vel_att = get_ini_pos_vel_att(def_fname)
+
     # imu model
     imu = get_imu(imu_type)
 
@@ -66,7 +69,11 @@ def gen_base_data(def_fname, imu_type, data_dir, num_run):
                       imu=imu,
                       mode=None,
                       env=None,
-                      algorithm=None)
+                      algorithm=None,                      
+                      gen_gt=False,
+                      ini_pos_vel_att=ini_pos_vel_att)
+
+    # run base_data num_run times
     sim.run(num_run)
     # save simulation data to files
     sim_result = sim.results(data_dir)
@@ -100,8 +107,10 @@ def gen_intergration_data_from_files(def_fname, data_dir, output_dir, num_run):
                       mode=None,
                       env=None,
                       algorithm=algo,
-                      gen_gt=True)
-    # run the simulation for 1000 times
+                      gen_gt=True,
+                      ini_pos_vel_att=ini_pos_vel_att)
+
+    # run the simulation for num_run times
     sim.run_intergration(num_run)
     # generate simulation results, summary
     sim_result = sim.results(output_dir, err_stats_start=-1, gen_kml=True)
@@ -118,7 +127,7 @@ if __name__ == '__main__':
     #def_fname = "//motion_def-ins-ethan.csv"
     #def_fname = "//motion_def-90deg_turn.csv"
 
-    movement_name = "circleRW"
+    movement_name = "smpfwdIM4"
     num_run = 3
     for imu_type in ["h", "m", "l"]:
         def_fname = "//motion_def-x-{}.csv".format(movement_name)

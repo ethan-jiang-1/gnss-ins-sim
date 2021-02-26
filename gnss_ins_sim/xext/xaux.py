@@ -4,6 +4,7 @@ import pandas as pd
 class XEnv(object):
     inspect_raw_data = True
     plot_raw_data = False
+    vib_vel = True
 
     @classmethod
     def get_inspect_raw_data(cls):
@@ -13,6 +14,9 @@ class XEnv(object):
     def get_plot_raw_data(cls):
         return cls.plot_raw_data
 
+    @classmethod
+    def get_vib_vel(cls):
+        return cls.vib_vel
 
 
 class XPlot(object):

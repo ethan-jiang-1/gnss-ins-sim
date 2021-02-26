@@ -35,7 +35,7 @@ class Sim(object):
     INS simulation engine.
     '''
     def __init__(self, fs, motion_def, ref_frame=0, imu=None,\
-                 mode=None, env=None, algorithm=None, gen_gt=False):
+                 mode=None, env=None, algorithm=None, gen_gt=False, ini_pos_vel_att=None):
         '''
         Args:
             fs: [fs_imu, fs_gps, fs_mag], Hz.
@@ -135,6 +135,7 @@ class Sim(object):
             self.ref_frame = 0      # default frame is NED
         self.gen_gt = gen_gt
         self._create_gt_imu()
+        self.ini_pos_vel_att = ini_pos_vel_att
 
         # simulation status
         self.sim_count = 1          # simulation count
@@ -618,7 +619,7 @@ class Sim(object):
 
         # ground-truth
         gt_accel = pathgen.acc_gen(self.fs[0], self.dmgr.ref_accel.data,
-                                self.imu_gt.accel_err, None)
+                                self.imu_gt.accel_err, vib_def=vib_def, vel_base=None)
         self.dmgr.add_data(self.dmgr.gt_accel.name, gt_accel)
 
         gt_gyro = pathgen.gyro_gen(self.fs[0], self.dmgr.ref_gyro.data,
@@ -628,13 +629,25 @@ class Sim(object):
             XPlot.plot_accel(gt_accel, title="gt_acc")
             XPlot.plot_gyro(gt_gyro, title="gt_gyro")
 
+        vel_base = None
+        if XEnv.get_vib_vel() and self.imu.odo:
+            if self.ini_pos_vel_att is not None:
+                vel_base = {}
+                vel_base['type'] = "vel_base"
+                odo_speed = rtn['odo'][:,2:5].transpose(1,0)
+                vel_base['vel_cur_x'] = odo_speed[0]
+                vel_base['vel_cur_y'] = odo_speed[1]
+                vel_base['vel_cur_z'] = odo_speed[2]
+                vel_base['vel_ini_x'] = self.ini_pos_vel_att[3]
+                vel_base['vel_ini_y'] = self.ini_pos_vel_att[4]
+                vel_base['vel_ini_z'] = self.ini_pos_vel_att[5]
+
         for i in range(self.sim_count):
             accel = pathgen.acc_gen(self.fs[0], self.dmgr.ref_accel.data,
-                                    self.imu.accel_err, vib_def)
+                                    self.imu.accel_err, vib_def=vib_def, vel_base=vel_base)
             self.dmgr.add_data(self.dmgr.accel.name, accel, key=i)
 
-            gyro = pathgen.gyro_gen(self.fs[0], self.dmgr.ref_gyro.data,\
-                                    self.imu.gyro_err)
+            gyro = pathgen.gyro_gen(self.fs[0], self.dmgr.ref_gyro.data, self.imu.gyro_err, vel_base=vel_base)
             self.dmgr.add_data(self.dmgr.gyro.name, gyro, key=i)
 
             if self.imu.gps:
@@ -736,8 +749,8 @@ class Sim(object):
             # so genfromtxt can read it.
             if not os.path.isfile(self.data_src):
                 self.data_src = list(self.data_src.split('\n'))
-            ini_state = np.genfromtxt(self.data_src, delimiter=',', skip_header=1, max_rows=1)
-            waypoints = np.genfromtxt(self.data_src, delimiter=',', skip_header=3)
+            ini_state = np.genfromtxt(self.data_src, delimiter=',', comments='#', skip_header=1, max_rows=1)
+            waypoints = np.genfromtxt(self.data_src, delimiter=',', comments='#', skip_header=3)
         except:
             raise ValueError('motion definition file/string must have nine columns \
                               and at least four rows (two header rows + at least two data rows).')
