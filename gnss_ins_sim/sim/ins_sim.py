@@ -183,7 +183,9 @@ class Sim(object):
             self.sim_count = 1
 
         #### generate sensor data from file or pathgen
-        self.__gen_data()
+        prompt_yellow("\n\n##Mode I: # gen data from motion definitions: __gen_data_from_pathgen", self.data_src)
+        self.__gen_data_from_pathgen()
+        self.gen_data_mode = "1:__gen_data_from_pathgen"
 
         #### run algorithms
         #self.__run_algo()
@@ -205,10 +207,30 @@ class Sim(object):
             self.sim_count = 1
 
         #### generate sensor data from file or pathgen
-        self.__gen_data()
+        if os.path.isdir(self.data_src):    # gen data from files in a directory
+            if not self.gen_gt:
+                prompt_yellow("\n\n##Mode IIA: gen data from files in a directory: __gen_data_from_files", self.data_src)
+                self.data_src = os.path.abspath(self.data_src)
+                self.__gen_data_from_files()
+                self.data_from_files = True
+                self.gen_data_mode = "2A:__gen_data_from_files"
+            else:
+                prompt_yellow("\n\n##Mode IIB: gen data from files in a directory: __gen_data_gt_from_files", self.data_src)
+                self.data_src = os.path.abspath(self.data_src)
+                self.__gen_data_gt_from_files()
+                self.data_from_files = True                
+                self.gen_data_mode = "2B:__gen_data_gt_from_files"
+        else:
+            raise ValueError("data_src not exist")
 
-        #### run algorithms
-        self.__run_algo()
+        if self.amgr.algo is not None:
+            #### run algorithms
+            self.__run_algo_normal()
+
+            if self.gen_data_mode == "2B:__gen_data_gt_from_files":
+                self.__run_aglo_gt()
+        else:
+            raise ValueError("no algo to run")
 
         # simulation complete successfully
         self.sim_complete = True
@@ -216,9 +238,10 @@ class Sim(object):
         #### generate associated data
         self.__add_associated_data_to_results()
 
-    def __run_algo(self):
+
+    def __run_algo_normal(self):
         if self.amgr.algo is not None:
-            prompt_cyan("__run_algo(nm)", self.gen_data_mode)
+            prompt_cyan("__run_algo_normal", self.gen_data_mode)
             # tell data manager the output of the algorithm
             self.dmgr.set_algo_output(self.amgr.output)
             # get algo input data
@@ -231,12 +254,10 @@ class Sim(object):
             # add algo output to ins_data_manager
             for i in range(len(self.amgr.output)):
                 self.dmgr.add_data(self.amgr.output[i], algo_output[i])
-            if self.gen_data_mode == "2B:__gen_data_gt_from_files":
-                self.__run_aglo_gt()
-    
+
     def __run_aglo_gt(self):
         if self.amgr.algo is not None:
-            prompt_cyan("__run_algo(gt)", self.gen_data_mode)
+            prompt_cyan("__run_algo_gt", self.gen_data_mode)
             gt_input = []
             for i in range(len(self.amgr.input)):
                 name = self.amgr.input[i]
@@ -260,9 +281,7 @@ class Sim(object):
             gt_algo_output = self.amgr.run_algo(gt_algo_input, range(self.sim_count), mark_step="ground-truth")
             # add algo output to ins_data_manager
             for i in range(len(self.amgr.output)):
-                self.dmgr.add_data(gt_output[i], gt_algo_output[i])            
-
-           
+                self.dmgr.add_data(gt_output[i], gt_algo_output[i])
 
     def results(self, data_dir=None, err_stats_start=0, gen_kml=False, extra_opt=''):
         '''
@@ -484,29 +503,6 @@ class Sim(object):
                     file_summary.write(self.sum + '\n')
             except:
                 raise IOError('Unable to save summary to %s.'% data_dir)
-
-    def __gen_data(self):
-        '''
-        Generate data
-        '''
-        if os.path.isdir(self.data_src):    # gen data from files in a directory
-            if not self.gen_gt:
-                prompt_yellow("\n\n##Mode IIA: gen data from files in a directory: __gen_data_from_files", self.data_src)
-                self.data_src = os.path.abspath(self.data_src)
-                self.__gen_data_from_files()
-                self.data_from_files = True
-                self.gen_data_mode = "2A:__gen_data_from_files"
-            else:
-                prompt_yellow("\n\n##Mode IIB: gen data from files in a directory: __gen_data_gt_from_files", self.data_src)
-                self.data_src = os.path.abspath(self.data_src)
-                self.__gen_data_gt_from_files()
-                self.data_from_files = True                
-                self.gen_data_mode = "2B:__gen_data_gt_from_files"
-        else: # gen data from motion definitions
-            prompt_yellow("\n\n##Mode I: # gen data from motion definitions: __gen_data_from_pathgen", self.data_src)
-            self.__gen_data_from_pathgen()
-            self.gen_data_mode = "1:__gen_data_from_pathgen"
-        prompt_cyan("__gen_data", self.gen_data_mode)
 
     def __gen_data_from_files(self):
         '''

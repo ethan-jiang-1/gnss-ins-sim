@@ -127,7 +127,7 @@ if __name__ == '__main__':
     #def_fname = "//motion_def-ins-ethan.csv"
     #def_fname = "//motion_def-90deg_turn.csv"
 
-    movement_name = "smpfwdIM4"
+    movement_name = "smpfwdIm0"
     num_run = 3
     for imu_type in ["h", "m", "l"]:
         def_fname = "//motion_def-x-{}.csv".format(movement_name)
