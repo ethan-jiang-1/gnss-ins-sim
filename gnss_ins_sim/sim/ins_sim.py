@@ -7,6 +7,7 @@ Created on 2018-04-24
 @author: dongxiaoguang
 """
 
+from gnss_ins_sim.pathgen.vel_bias import VelBias
 import os
 import time
 import math
@@ -183,9 +184,9 @@ class Sim(object):
             self.sim_count = 1
 
         #### generate sensor data from file or pathgen
-        prompt_yellow("\n\n##Mode I: # gen data from motion definitions: __gen_data_from_pathgen", self.data_src)
-        self.__gen_data_from_pathgen()
-        self.gen_data_mode = "1:__gen_data_from_pathgen"
+        prompt_yellow("\n\n##Mode I: # gen data from motion definitions: __gen_data_from_pathgen_core", self.data_src)
+        self.__gen_data_from_pathgen_core()
+        self.gen_data_mode = "1:__gen_data_from_pathgen_core"
 
         #### run algorithms
         #self.__run_algo()
@@ -542,7 +543,7 @@ class Sim(object):
                 # print([data_name, data_key, units])
                 self.dmgr.add_data(data_name, data, data_key, units)
     
-    def __gen_data_from_pathgen(self):
+    def __gen_data_from_pathgen_core(self):
         '''
         Generate data from pathgen.
         '''
@@ -613,46 +614,52 @@ class Sim(object):
             print("gps_err\t", self.imu.gps_err)
             print("odo_err\t", self.imu.odo_err)
 
+        vel_bias = None
+        if XEnv.get_vib_vel() and self.imu.odo:
+            if self.ini_pos_vel_att is not None:
+                odo_speed = rtn['odo'][:,2:5]
+                ini_vel = self.ini_pos_vel_att[3:6]
+                vel_bias = VelBias(odo_speed, ini_vel)
+
+        self.__gen_sgt_data_based_on_ref_data(vib_def, vel_bias)
+        self.__gen_mrd_data_based_on_ref_data(vib_def, vel_bias)
+
+    # single round ground truth data based on ref_data (using high accurate imu_gt)
+    def __gen_sgt_data_based_on_ref_data(self, vib_def, vel_bias):
         # ground-truth
         gt_accel = pathgen.acc_gen(self.fs[0], self.dmgr.ref_accel.data,
-                                self.imu_gt.accel_err, vib_def=vib_def, vel_base=None)
+                                self.imu_gt.accel_err, vib_def=vib_def, vel_bias=vel_bias)
         self.dmgr.add_data(self.dmgr.gt_accel.name, gt_accel)
 
         gt_gyro = pathgen.gyro_gen(self.fs[0], self.dmgr.ref_gyro.data,
-                                self.imu_gt.gyro_err)
+                                self.imu_gt.gyro_err, vel_bias=vel_bias)
         self.dmgr.add_data(self.dmgr.gt_gyro.name, gt_gyro)
+    
         if XEnv.get_plot_raw_data():
             XPlot.plot_accel(gt_accel, title="gt_acc")
             XPlot.plot_gyro(gt_gyro, title="gt_gyro")
 
-        vel_base = None
-        if XEnv.get_vib_vel() and self.imu.odo:
-            if self.ini_pos_vel_att is not None:
-                vel_base = {}
-                vel_base['type'] = "vel_base"
-                odo_speed = rtn['odo'][:,2:5].transpose(1,0)
-                vel_base['vel_cur_x'] = odo_speed[0]
-                vel_base['vel_cur_y'] = odo_speed[1]
-                vel_base['vel_cur_z'] = odo_speed[2]
-                vel_base['vel_ini_x'] = self.ini_pos_vel_att[3]
-                vel_base['vel_ini_y'] = self.ini_pos_vel_att[4]
-                vel_base['vel_ini_z'] = self.ini_pos_vel_att[5]
-
+    # multiple round data based on ref_data (using selected imu yield difference data due to noise and baise)
+    def __gen_mrd_data_based_on_ref_data(self, vib_def, vel_bias):
+        # multiple round of data
         for i in range(self.sim_count):
             accel = pathgen.acc_gen(self.fs[0], self.dmgr.ref_accel.data,
-                                    self.imu.accel_err, vib_def=vib_def, vel_base=vel_base)
+                                    self.imu.accel_err, vib_def=vib_def, vel_bias=vel_bias)
             self.dmgr.add_data(self.dmgr.accel.name, accel, key=i)
 
-            gyro = pathgen.gyro_gen(self.fs[0], self.dmgr.ref_gyro.data, self.imu.gyro_err, vel_base=vel_base)
+            gyro = pathgen.gyro_gen(self.fs[0], self.dmgr.ref_gyro.data, 
+                                    self.imu.gyro_err, vel_bias=vel_bias)
             self.dmgr.add_data(self.dmgr.gyro.name, gyro, key=i)
 
             if self.imu.gps:
                 gps = pathgen.gps_gen(self.dmgr.ref_gps.data, self.imu.gps_err,\
                                                    self.ref_frame)
                 self.dmgr.add_data(self.dmgr.gps.name, gps, key=i)
+
             if self.imu.magnetometer:
                 mag = pathgen.mag_gen(self.dmgr.ref_mag.data, self.imu.mag_err)
                 self.dmgr.add_data(self.dmgr.mag.name, mag, key=i)
+        
             if self.imu.odo:
                 odo = pathgen.odo_gen(self.dmgr.ref_odo.data, self.imu.odo_err)
                 self.dmgr.add_data(self.dmgr.odo.name, odo, key=i)

@@ -17,7 +17,12 @@ import numpy as np
 from ..attitude import attitude
 from ..geoparams import geoparams
 from ..geoparams import geomag
-from ..psd import time_series_from_psd
+#from ..psd import time_series_from_psd
+
+from gnss_ins_sim.pathgen.calc_imu_output import calc_true_sensor_output
+from gnss_ins_sim.pathgen.aux_gen import acc_gen, gyro_gen, gps_gen, odo_gen, mag_gen  # noqa:F401
+from gnss_ins_sim.pathgen.aux_utils import parse_motion_def
+from gnss_ins_sim.pathgen.vel_bias import VelBias  # noqa:F401
 
 # global
 VERSION = '1.0'
@@ -332,310 +337,310 @@ def path_gen(ini_pos_vel_att, motion_def, output_def, mobility, ref_frame=0, mag
         path_results['gps'] = gps_data[0:idx_low_freq, :]
     return path_results
 
-def calc_true_sensor_output(pos_n, vel_b, att, c_nb, vel_dot_b, att_dot, ref_frame, g):
-    """
-    Calculate true IMU results from attitude change rate and velocity
-    change rate.
-    attitude change rate is input in the form of Euler angle derivatives and
-    converted into angular velocity. Velocity change rate is expressed in
-    the body frame. Position change rate is also calculated. If simulation is
-    done in the NED frame, the position change rate is in the form of Lat, Lon
-    and alt derivatives. Otherwise, it is given in m/s.
-    Args:
-        pos_n: For NED, it is the absolute LLA position. Otherwise, it is relative
-            motion.
-        vel_b: Velocity in the body frame, m/s.
-        att: Euler angles, [yaw pitch roll], rot seq is ZYX, rad.
-        c_nb: Transformation matrix from b to n corresponding to att.
-        vel_dot_b: Velocity change rate in the body frame, m/s/s
-        att_dot: Euler angle change rate, [yaw_d, pitch_d, roll_d], rad/s
-        ref_frame: See doc of function PathGen.
-        g: Gravity, only used when ref_frame==1, m/s/s.
-    Returns:
-        [0]: 3x1 true accelerometer output in the body frame, m/s/s
-        [1]: 3x1 true gyro output in the body frame, rad/s
-        [2]: 3x1 velocity change rate in the navigation frame, m/s/s
-        [3]: 3x1 position change rate in the navigation frame, m/s
-    """
-    # velocity in N
-    vel_n = c_nb.dot(vel_b)
+# def calc_true_sensor_output(pos_n, vel_b, att, c_nb, vel_dot_b, att_dot, ref_frame, g):
+#     """
+#     Calculate true IMU results from attitude change rate and velocity
+#     change rate.
+#     attitude change rate is input in the form of Euler angle derivatives and
+#     converted into angular velocity. Velocity change rate is expressed in
+#     the body frame. Position change rate is also calculated. If simulation is
+#     done in the NED frame, the position change rate is in the form of Lat, Lon
+#     and alt derivatives. Otherwise, it is given in m/s.
+#     Args:
+#         pos_n: For NED, it is the absolute LLA position. Otherwise, it is relative
+#             motion.
+#         vel_b: Velocity in the body frame, m/s.
+#         att: Euler angles, [yaw pitch roll], rot seq is ZYX, rad.
+#         c_nb: Transformation matrix from b to n corresponding to att.
+#         vel_dot_b: Velocity change rate in the body frame, m/s/s
+#         att_dot: Euler angle change rate, [yaw_d, pitch_d, roll_d], rad/s
+#         ref_frame: See doc of function PathGen.
+#         g: Gravity, only used when ref_frame==1, m/s/s.
+#     Returns:
+#         [0]: 3x1 true accelerometer output in the body frame, m/s/s
+#         [1]: 3x1 true gyro output in the body frame, rad/s
+#         [2]: 3x1 velocity change rate in the navigation frame, m/s/s
+#         [3]: 3x1 position change rate in the navigation frame, m/s
+#     """
+#     # velocity in N
+#     vel_n = c_nb.dot(vel_b)
 
-    # Calculate rotation rate of n w.r.t e in n and e w.r.t i in n
-    # For the NED frame, the NED frame rotation and Earth rotation rate is calculated
-    # For the virtual inertial frame, they are not needed and simply set to zeros.
-    w_en_n = np.zeros(3)
-    w_ie_n = np.zeros(3)
-    if ref_frame == 0:
-        earth_param = geoparams.geo_param(pos_n)
-        rm = earth_param[0]
-        rn = earth_param[1]
-        g = earth_param[2]
-        sl = earth_param[3]
-        cl = earth_param[4]
-        w_ie = earth_param[5]
-        rm_effective = rm + pos_n[2]
-        rn_effective = rn + pos_n[2]
-        gravity = np.array([0, 0, g])
-        w_en_n[0] = vel_n[1] / rn_effective              # wN
-        w_en_n[1] = -vel_n[0] / rm_effective             # wE
-        w_en_n[2] = -vel_n[1] * sl /cl / rn_effective    # wD
-        w_ie_n[0] = w_ie * cl
-        w_ie_n[2] = -w_ie * sl
-    else:
-        gravity = [0, 0, g]
+#     # Calculate rotation rate of n w.r.t e in n and e w.r.t i in n
+#     # For the NED frame, the NED frame rotation and Earth rotation rate is calculated
+#     # For the virtual inertial frame, they are not needed and simply set to zeros.
+#     w_en_n = np.zeros(3)
+#     w_ie_n = np.zeros(3)
+#     if ref_frame == 0:
+#         earth_param = geoparams.geo_param(pos_n)
+#         rm = earth_param[0]
+#         rn = earth_param[1]
+#         g = earth_param[2]
+#         sl = earth_param[3]
+#         cl = earth_param[4]
+#         w_ie = earth_param[5]
+#         rm_effective = rm + pos_n[2]
+#         rn_effective = rn + pos_n[2]
+#         gravity = np.array([0, 0, g])
+#         w_en_n[0] = vel_n[1] / rn_effective              # wN
+#         w_en_n[1] = -vel_n[0] / rm_effective             # wE
+#         w_en_n[2] = -vel_n[1] * sl /cl / rn_effective    # wD
+#         w_ie_n[0] = w_ie * cl
+#         w_ie_n[2] = -w_ie * sl
+#     else:
+#         gravity = [0, 0, g]
 
-    # Calculate rotation rate of b w.r.t n expressed in n.
-    # Calculate rotation rate from Euler angle derivative using ZYX rot seq.
-    sh = math.sin(att[0])
-    ch = math.cos(att[0])
-    w_nb_n = np.zeros(3)
-    w_nb_n[0] = -sh*att_dot[1] + c_nb[0, 0]*att_dot[2]
-    w_nb_n[1] = ch*att_dot[1] + c_nb[1, 0]*att_dot[2]
-    w_nb_n[2] = att_dot[0] + c_nb[2, 0]*att_dot[2]
-    # Calculate rotation rate from rotation quaternion
-    # w_nb_n = np.zeros(3)
+#     # Calculate rotation rate of b w.r.t n expressed in n.
+#     # Calculate rotation rate from Euler angle derivative using ZYX rot seq.
+#     sh = math.sin(att[0])
+#     ch = math.cos(att[0])
+#     w_nb_n = np.zeros(3)
+#     w_nb_n[0] = -sh*att_dot[1] + c_nb[0, 0]*att_dot[2]
+#     w_nb_n[1] = ch*att_dot[1] + c_nb[1, 0]*att_dot[2]
+#     w_nb_n[2] = att_dot[0] + c_nb[2, 0]*att_dot[2]
+#     # Calculate rotation rate from rotation quaternion
+#     # w_nb_n = np.zeros(3)
 
-    # Velocity derivative
-    vel_dot_n = c_nb.dot(vel_dot_b) + attitude.cross3(w_nb_n, vel_n)
-    # Position derivative
-    pos_dot_n = np.zeros(3)
-    if ref_frame == 0:
-        pos_dot_n[0] = vel_n[0] / rm_effective      # Lat
-        pos_dot_n[1] = vel_n[1] / rn_effective / cl # Lon
-        pos_dot_n[2] = -vel_n[2]                    # Alt
-    else:
-        pos_dot_n[0] = vel_n[0]
-        pos_dot_n[1] = vel_n[1]
-        pos_dot_n[2] = vel_n[2]
-    # Gyroscope output
-    gyro = c_nb.T.dot(w_nb_n + w_en_n + w_ie_n)
-    # Acceleration output
-    w_ie_b = c_nb.T.dot(w_ie_n)
-    acc = vel_dot_b + attitude.cross3(w_ie_b+gyro, vel_b) - c_nb.T.dot(gravity)
-    return acc, gyro, vel_dot_n, pos_dot_n
+#     # Velocity derivative
+#     vel_dot_n = c_nb.dot(vel_dot_b) + attitude.cross3(w_nb_n, vel_n)
+#     # Position derivative
+#     pos_dot_n = np.zeros(3)
+#     if ref_frame == 0:
+#         pos_dot_n[0] = vel_n[0] / rm_effective      # Lat
+#         pos_dot_n[1] = vel_n[1] / rn_effective / cl # Lon
+#         pos_dot_n[2] = -vel_n[2]                    # Alt
+#     else:
+#         pos_dot_n[0] = vel_n[0]
+#         pos_dot_n[1] = vel_n[1]
+#         pos_dot_n[2] = vel_n[2]
+#     # Gyroscope output
+#     gyro = c_nb.T.dot(w_nb_n + w_en_n + w_ie_n)
+#     # Acceleration output
+#     w_ie_b = c_nb.T.dot(w_ie_n)
+#     acc = vel_dot_b + attitude.cross3(w_ie_b+gyro, vel_b) - c_nb.T.dot(gravity)
+#     return acc, gyro, vel_dot_n, pos_dot_n
 
-def parse_motion_def(motion_def_seg, att, vel):
-    """
-    Parse the command of a segment in motion_def.
-    Args:
-        motion_def_seg: a segment in motion_def
-        att: current attitude
-        vel: current velocity
-    Returns:
-        [0]: Target attitude
-        [1]: Target velocity
-    """
-    if motion_def_seg[0] == 1:
-        att_com = [motion_def_seg[1], motion_def_seg[2], motion_def_seg[3]]
-        vel_com = [motion_def_seg[4], motion_def_seg[5], motion_def_seg[6]]
-    elif motion_def_seg[0] == 2:   # abs att and abs vel
-        att_com = [motion_def_seg[1], motion_def_seg[2], motion_def_seg[3]]
-        vel_com = [motion_def_seg[4], motion_def_seg[5], motion_def_seg[6]]
-    elif motion_def_seg[0] == 3:   # rel att and rel vel
-        att_com = att + [motion_def_seg[1], motion_def_seg[2], motion_def_seg[3]]
-        vel_com = vel + [motion_def_seg[4], motion_def_seg[5], motion_def_seg[6]]
-    elif motion_def_seg[0] == 4:   # abs att and rel vel
-        att_com = [motion_def_seg[1], motion_def_seg[2], motion_def_seg[3]]
-        vel_com = vel + [motion_def_seg[4], motion_def_seg[5], motion_def_seg[6]]
-    elif motion_def_seg[0] == 5:   # rel att and abs vel
-        att_com = att + [motion_def_seg[1], motion_def_seg[2], motion_def_seg[3]]
-        vel_com = [motion_def_seg[4], motion_def_seg[5], motion_def_seg[6]]
-    return att_com, vel_com
+# def parse_motion_def(motion_def_seg, att, vel):
+#     """
+#     Parse the command of a segment in motion_def.
+#     Args:
+#         motion_def_seg: a segment in motion_def
+#         att: current attitude
+#         vel: current velocity
+#     Returns:
+#         [0]: Target attitude
+#         [1]: Target velocity
+#     """
+#     if motion_def_seg[0] == 1:
+#         att_com = [motion_def_seg[1], motion_def_seg[2], motion_def_seg[3]]
+#         vel_com = [motion_def_seg[4], motion_def_seg[5], motion_def_seg[6]]
+#     elif motion_def_seg[0] == 2:   # abs att and abs vel
+#         att_com = [motion_def_seg[1], motion_def_seg[2], motion_def_seg[3]]
+#         vel_com = [motion_def_seg[4], motion_def_seg[5], motion_def_seg[6]]
+#     elif motion_def_seg[0] == 3:   # rel att and rel vel
+#         att_com = att + [motion_def_seg[1], motion_def_seg[2], motion_def_seg[3]]
+#         vel_com = vel + [motion_def_seg[4], motion_def_seg[5], motion_def_seg[6]]
+#     elif motion_def_seg[0] == 4:   # abs att and rel vel
+#         att_com = [motion_def_seg[1], motion_def_seg[2], motion_def_seg[3]]
+#         vel_com = vel + [motion_def_seg[4], motion_def_seg[5], motion_def_seg[6]]
+#     elif motion_def_seg[0] == 5:   # rel att and abs vel
+#         att_com = att + [motion_def_seg[1], motion_def_seg[2], motion_def_seg[3]]
+#         vel_com = [motion_def_seg[4], motion_def_seg[5], motion_def_seg[6]]
+#     return att_com, vel_com
 
-def acc_gen(fs, ref_a, acc_err, vib_def=None, vel_base=None):
-    """
-    Add error to true acc data according to acclerometer model parameters
-    Args:
-        fs: sample frequency, Hz.
-        ref_a: nx3 true acc data, m/s2.
-        acc_err: accelerometer error parameters.
-            'b': 3x1 acc constant bias, m/s2.
-            'b_drift': 3x1 acc bias drift, m/s2.
-            'vrw': 3x1 velocity random walk, m/s2/root-Hz.
-        vib_def: Vibration model and parameters. Vibration type can be random, sinunoida or
-            specified by single-sided PSD.
-            Generated vibrating acc is expressed in the body frame.
-            'type' == 'random':
-                Normal distribution. 'x', 'y' and 'z' give the 1sigma values along x, y and z axis.
-                units: m/s2
-            'type' == 'sinunoidal'
-                Sinunoidal vibration. 'x', 'y' and 'z' give the amplitude of the sine wave along
-                x, y and z axis. units: m/s2.
-            'type' == 'psd'. Single sided PSD.
-                'freq':  frequency, in unit of Hz
-                'x': x axis, in unit of m2/s4/Hz.
-                'y': y axis, in unit of m2/s4/Hz.
-                'z': z axis, in unit of m2/s4/Hz.
-            'type' == 'vel'
+# def acc_gen(fs, ref_a, acc_err, vib_def=None, vel_bias=None):
+#     """
+#     Add error to true acc data according to acclerometer model parameters
+#     Args:
+#         fs: sample frequency, Hz.
+#         ref_a: nx3 true acc data, m/s2.
+#         acc_err: accelerometer error parameters.
+#             'b': 3x1 acc constant bias, m/s2.
+#             'b_drift': 3x1 acc bias drift, m/s2.
+#             'vrw': 3x1 velocity random walk, m/s2/root-Hz.
+#         vib_def: Vibration model and parameters. Vibration type can be random, sinunoida or
+#             specified by single-sided PSD.
+#             Generated vibrating acc is expressed in the body frame.
+#             'type' == 'random':
+#                 Normal distribution. 'x', 'y' and 'z' give the 1sigma values along x, y and z axis.
+#                 units: m/s2
+#             'type' == 'sinunoidal'
+#                 Sinunoidal vibration. 'x', 'y' and 'z' give the amplitude of the sine wave along
+#                 x, y and z axis. units: m/s2.
+#             'type' == 'psd'. Single sided PSD.
+#                 'freq':  frequency, in unit of Hz
+#                 'x': x axis, in unit of m2/s4/Hz.
+#                 'y': y axis, in unit of m2/s4/Hz.
+#                 'z': z axis, in unit of m2/s4/Hz.
+#             'type' == 'vel'
 
-    Returns:
-        a_mea: nx3 measured acc data
-    """
-    dt = 1.0/fs
-    # total data count
-    n = ref_a.shape[0]
-    ## simulate sensor error
-    # static bias
-    acc_bias = acc_err['b']
-    # bias drift
-    acc_bias_drift = bias_drift(acc_err['b_corr'], acc_err['b_drift'], n, fs)
-    # vibrating acceleration
-    acc_vib = np.zeros((n, 3))
-    if vib_def is not None:
-        if vib_def['type'].lower() == 'psd':
-            acc_vib[:, 0] = time_series_from_psd.time_series_from_psd(vib_def['x'],
-                                                                      vib_def['freq'], fs, n)[1]
-            acc_vib[:, 1] = time_series_from_psd.time_series_from_psd(vib_def['y'],
-                                                                      vib_def['freq'], fs, n)[1]
-            acc_vib[:, 2] = time_series_from_psd.time_series_from_psd(vib_def['z'],
-                                                                      vib_def['freq'], fs, n)[1]
-        elif vib_def['type'] == 'random':
-            acc_vib[:, 0] = vib_def['x'] * np.random.randn(n)
-            acc_vib[:, 1] = vib_def['y'] * np.random.randn(n)
-            acc_vib[:, 2] = vib_def['z'] * np.random.randn(n)
-        elif vib_def['type'] == 'sinusoidal':
-            acc_vib[:, 0] = vib_def['x'] * np.sin(2.0*math.pi*vib_def['freq']*dt*np.arange(n))
-            acc_vib[:, 1] = vib_def['y'] * np.sin(2.0*math.pi*vib_def['freq']*dt*np.arange(n))
-            acc_vib[:, 2] = vib_def['z'] * np.sin(2.0*math.pi*vib_def['freq']*dt*np.arange(n))
-        else:
-            raise ValueError("not_supported")
+#     Returns:
+#         a_mea: nx3 measured acc data
+#     """
+#     dt = 1.0/fs
+#     # total data count
+#     n = ref_a.shape[0]
+#     ## simulate sensor error
+#     # static bias
+#     acc_bias = acc_err['b']
+#     # bias drift
+#     acc_bias_drift = bias_drift(acc_err['b_corr'], acc_err['b_drift'], n, fs)
+#     # vibrating acceleration
+#     acc_vib = np.zeros((n, 3))
+#     if vib_def is not None:
+#         if vib_def['type'].lower() == 'psd':
+#             acc_vib[:, 0] = time_series_from_psd.time_series_from_psd(vib_def['x'],
+#                                                                       vib_def['freq'], fs, n)[1]
+#             acc_vib[:, 1] = time_series_from_psd.time_series_from_psd(vib_def['y'],
+#                                                                       vib_def['freq'], fs, n)[1]
+#             acc_vib[:, 2] = time_series_from_psd.time_series_from_psd(vib_def['z'],
+#                                                                       vib_def['freq'], fs, n)[1]
+#         elif vib_def['type'] == 'random':
+#             acc_vib[:, 0] = vib_def['x'] * np.random.randn(n)
+#             acc_vib[:, 1] = vib_def['y'] * np.random.randn(n)
+#             acc_vib[:, 2] = vib_def['z'] * np.random.randn(n)
+#         elif vib_def['type'] == 'sinusoidal':
+#             acc_vib[:, 0] = vib_def['x'] * np.sin(2.0*math.pi*vib_def['freq']*dt*np.arange(n))
+#             acc_vib[:, 1] = vib_def['y'] * np.sin(2.0*math.pi*vib_def['freq']*dt*np.arange(n))
+#             acc_vib[:, 2] = vib_def['z'] * np.sin(2.0*math.pi*vib_def['freq']*dt*np.arange(n))
+#         else:
+#             raise ValueError("not_supported")
 
-    # accelerometer white noise
-    acc_noise = np.random.randn(n, 3)
-    acc_noise[:, 0] = acc_err['vrw'][0] / math.sqrt(dt) * acc_noise[:, 0]
-    acc_noise[:, 1] = acc_err['vrw'][1] / math.sqrt(dt) * acc_noise[:, 1]
-    acc_noise[:, 2] = acc_err['vrw'][2] / math.sqrt(dt) * acc_noise[:, 2]
-    # true + constant_bias + bias_drift + noise
-    a_mea = ref_a + acc_bias + acc_bias_drift + acc_noise + acc_vib
-    return a_mea
+#     # accelerometer white noise
+#     acc_noise = np.random.randn(n, 3)
+#     acc_noise[:, 0] = acc_err['vrw'][0] / math.sqrt(dt) * acc_noise[:, 0]
+#     acc_noise[:, 1] = acc_err['vrw'][1] / math.sqrt(dt) * acc_noise[:, 1]
+#     acc_noise[:, 2] = acc_err['vrw'][2] / math.sqrt(dt) * acc_noise[:, 2]
+#     # true + constant_bias + bias_drift + noise
+#     a_mea = ref_a + acc_bias + acc_bias_drift + acc_noise + acc_vib
+#     return a_mea
 
-def gyro_gen(fs, ref_w, gyro_err, vel_base=None):
-    """
-    Add error to true gyro data according to gyroscope model parameters
-    Args:
-        fs: sample frequency, Hz.
-        ref_w: nx3 true acc data, rad/s.
-        gyro_err: gyroscope error parameters.
-            'b': 3x1 constant gyro bias, rad/s.
-            'b_drift': 3x1 gyro bias drift, rad/s.
-            'arw': 3x1 angle random walk, rad/s/root-Hz.
-    Returns:
-        w_mea: nx3 measured gyro data
-    """
-    dt = 1.0/fs
-    # total data count
-    n = ref_w.shape[0]
-    ## simulate sensor error
-    # static bias
-    gyro_bias = gyro_err['b']
-    # bias drift Todo: first-order Gauss-Markov model
-    gyro_bias_drift = bias_drift(gyro_err['b_corr'], gyro_err['b_drift'], n, fs)
-    # gyroscope white noise
-    gyro_noise = np.random.randn(n, 3)
-    gyro_noise[:, 0] = gyro_err['arw'][0] / math.sqrt(dt) * gyro_noise[:, 0]
-    gyro_noise[:, 1] = gyro_err['arw'][1] / math.sqrt(dt) * gyro_noise[:, 1]
-    gyro_noise[:, 2] = gyro_err['arw'][2] / math.sqrt(dt) * gyro_noise[:, 2]
+# def gyro_gen(fs, ref_w, gyro_err, vel_bias=None):
+#     """
+#     Add error to true gyro data according to gyroscope model parameters
+#     Args:
+#         fs: sample frequency, Hz.
+#         ref_w: nx3 true acc data, rad/s.
+#         gyro_err: gyroscope error parameters.
+#             'b': 3x1 constant gyro bias, rad/s.
+#             'b_drift': 3x1 gyro bias drift, rad/s.
+#             'arw': 3x1 angle random walk, rad/s/root-Hz.
+#     Returns:
+#         w_mea: nx3 measured gyro data
+#     """
+#     dt = 1.0/fs
+#     # total data count
+#     n = ref_w.shape[0]
+#     ## simulate sensor error
+#     # static bias
+#     gyro_bias = gyro_err['b']
+#     # bias drift Todo: first-order Gauss-Markov model
+#     gyro_bias_drift = bias_drift(gyro_err['b_corr'], gyro_err['b_drift'], n, fs)
+#     # gyroscope white noise
+#     gyro_noise = np.random.randn(n, 3)
+#     gyro_noise[:, 0] = gyro_err['arw'][0] / math.sqrt(dt) * gyro_noise[:, 0]
+#     gyro_noise[:, 1] = gyro_err['arw'][1] / math.sqrt(dt) * gyro_noise[:, 1]
+#     gyro_noise[:, 2] = gyro_err['arw'][2] / math.sqrt(dt) * gyro_noise[:, 2]
 
-    gyro_vel = np.zeros((n, 3))
-    if vel_base is not None:
-        pass
+#     gyro_vel = np.zeros((n, 3))
+#     if vel_bias is not None:
+#         pass
 
-    # true + constant_bias + bias_drift + noise
-    w_mea = ref_w + gyro_bias + gyro_bias_drift + gyro_noise + gyro_vel
-    return w_mea
+#     # true + constant_bias + bias_drift + noise
+#     w_mea = ref_w + gyro_bias + gyro_bias_drift + gyro_noise + gyro_vel
+#     return w_mea
 
-def bias_drift(corr_time, drift, n, fs):
-    """
-    Bias drift (instability) model for accelerometers or gyroscope.
-    If correlation time is valid (positive and finite), a first-order Gauss-Markov model is used.
-    Otherwise, a simple normal distribution model is used.
-    Args:
-        corr_time: 3x1 correlation time, sec.
-        drift: 3x1 bias drift std, rad/s.
-        n: total data count
-        fs: sample frequency, Hz.
-    Returns
-        sensor_bias_drift: drift of sensor bias
-    """
-    # 3 axis
-    sensor_bias_drift = np.zeros((n, 3))
-    for i in range(0, 3):
-        if not math.isinf(corr_time[i]):
-            # First-order Gauss-Markov
-            a = 1 - 1/fs/corr_time[i]
-            b = 1/fs*drift[i]
-            #sensor_bias_drift[0, :] = np.random.randn(3) * drift
-            drift_noise = np.random.randn(n, 3)
-            for j in range(1, n):
-                sensor_bias_drift[j, i] = a*sensor_bias_drift[j-1, i] + b*drift_noise[j-1, i]
-        else:
-            # normal distribution
-            sensor_bias_drift[:, i] = drift[i] * np.random.randn(n)
-    return sensor_bias_drift
+# def bias_drift(corr_time, drift, n, fs):
+#     """
+#     Bias drift (instability) model for accelerometers or gyroscope.
+#     If correlation time is valid (positive and finite), a first-order Gauss-Markov model is used.
+#     Otherwise, a simple normal distribution model is used.
+#     Args:
+#         corr_time: 3x1 correlation time, sec.
+#         drift: 3x1 bias drift std, rad/s.
+#         n: total data count
+#         fs: sample frequency, Hz.
+#     Returns
+#         sensor_bias_drift: drift of sensor bias
+#     """
+#     # 3 axis
+#     sensor_bias_drift = np.zeros((n, 3))
+#     for i in range(0, 3):
+#         if not math.isinf(corr_time[i]):
+#             # First-order Gauss-Markov
+#             a = 1 - 1/fs/corr_time[i]
+#             b = 1/fs*drift[i]
+#             #sensor_bias_drift[0, :] = np.random.randn(3) * drift
+#             drift_noise = np.random.randn(n, 3)
+#             for j in range(1, n):
+#                 sensor_bias_drift[j, i] = a*sensor_bias_drift[j-1, i] + b*drift_noise[j-1, i]
+#         else:
+#             # normal distribution
+#             sensor_bias_drift[:, i] = drift[i] * np.random.randn(n)
+#     return sensor_bias_drift
 
-def gps_gen(ref_gps, gps_err, gps_type=0):
-    '''
-    Add error to true GPS data according to GPS receiver error parameters
-    Args:
-        ref_gps: If gps_type is 0, [Lat, Lon, Alt, vx, vy, vz], [rad, rad, m].
-                 If gps_type is 1, [x, y, z, vx, vy, vz], [m, m, m].
-                 ref_gps data are expressed in the navigation frame.
-        gps_err: GPS reeceiver parameters.
-            'stdp': RMS position error, [m, m, m].
-            'stdv': RMS velocity error, [m/s, m/s, m/s].
-        gps_type: GPS data type.
-            0: default, position is in the form of [Lat, Lon, Alt], rad, m
-            1: position is in the form of [x, y, z], m
-    Returns:
-        gps_mea: ref_gps with error.
-    '''
-    # total data count
-    n = ref_gps.shape[0]
-    pos_err = gps_err['stdp'].copy()
-    # If position is in the form of LLA, convert gps_err['stdp'] to LLA error
-    if gps_type == 0:   # GPS is in the form of LLA, stdp meter to rad
-        earth_param = geoparams.geo_param(ref_gps[0, 0:3])
-        pos_err[0] = pos_err[0] / earth_param[0]
-        pos_err[1] = pos_err[1] / earth_param[1] / earth_param[4]
-    ## simulate GPS error
-    pos_noise = pos_err * np.random.randn(n, 3)
-    vel_noise = gps_err['stdv'] * np.random.randn(n, 3)
-    gps_mea = np.hstack([ref_gps[:, 0:3] + pos_noise,
-                         ref_gps[:, 3:6] + vel_noise])
-    return gps_mea
+# def gps_gen(ref_gps, gps_err, gps_type=0):
+#     '''
+#     Add error to true GPS data according to GPS receiver error parameters
+#     Args:
+#         ref_gps: If gps_type is 0, [Lat, Lon, Alt, vx, vy, vz], [rad, rad, m].
+#                  If gps_type is 1, [x, y, z, vx, vy, vz], [m, m, m].
+#                  ref_gps data are expressed in the navigation frame.
+#         gps_err: GPS reeceiver parameters.
+#             'stdp': RMS position error, [m, m, m].
+#             'stdv': RMS velocity error, [m/s, m/s, m/s].
+#         gps_type: GPS data type.
+#             0: default, position is in the form of [Lat, Lon, Alt], rad, m
+#             1: position is in the form of [x, y, z], m
+#     Returns:
+#         gps_mea: ref_gps with error.
+#     '''
+#     # total data count
+#     n = ref_gps.shape[0]
+#     pos_err = gps_err['stdp'].copy()
+#     # If position is in the form of LLA, convert gps_err['stdp'] to LLA error
+#     if gps_type == 0:   # GPS is in the form of LLA, stdp meter to rad
+#         earth_param = geoparams.geo_param(ref_gps[0, 0:3])
+#         pos_err[0] = pos_err[0] / earth_param[0]
+#         pos_err[1] = pos_err[1] / earth_param[1] / earth_param[4]
+#     ## simulate GPS error
+#     pos_noise = pos_err * np.random.randn(n, 3)
+#     vel_noise = gps_err['stdv'] * np.random.randn(n, 3)
+#     gps_mea = np.hstack([ref_gps[:, 0:3] + pos_noise,
+#                          ref_gps[:, 3:6] + vel_noise])
+#     return gps_mea
 
-def odo_gen(ref_odo, odo_err):
-    '''
-    Add error to true odometer data.
-    Args:
-        ref_odo: nx3, true odometer data, m/s.
-        odo_err: odometer error profile.
-            'scale': scalar, scale factor error.
-            'stdv': scalar, RMS velocity error.
-    Returns:
-        odo_mea: nx1, measured odometer output.
-    '''
-    n = ref_odo.shape[0]
-    odo_mea = np.random.randn(n)
-    odo_mea = odo_err['scale']*ref_odo + odo_err['stdv']*odo_mea
-    return odo_mea
+# def odo_gen(ref_odo, odo_err):
+#     '''
+#     Add error to true odometer data.
+#     Args:
+#         ref_odo: nx3, true odometer data, m/s.
+#         odo_err: odometer error profile.
+#             'scale': scalar, scale factor error.
+#             'stdv': scalar, RMS velocity error.
+#     Returns:
+#         odo_mea: nx1, measured odometer output.
+#     '''
+#     n = ref_odo.shape[0]
+#     odo_mea = np.random.randn(n)
+#     odo_mea = odo_err['scale']*ref_odo + odo_err['stdv']*odo_mea
+#     return odo_mea
 
-def mag_gen(ref_mag, mag_err):
-    """
-    Add error to magnetic data.
-    Args:
-        ref_mag: nx3 true magnetic data, uT.
-        mag_err: Magnetometer error parameters.
-            'si': 3x3 soft iron matrix
-            'hi': hard iron array, [ox, oy, oz], uT
-            'std': RMS of magnetometer noise, uT
-    Returns:
-        mag_mea: ref_mag with error, mag_mea = si * (ref_mag + hi) + noise
-    """
-    # total data count
-    n = ref_mag.shape[0]
-    # add error
-    mag_mea = ref_mag + mag_err['hi']
-    mag_mea = mag_mea.dot(mag_err['si'].T)
-    mag_noise = mag_err['std'] * np.random.randn(n, 3)
-    return mag_mea + mag_noise
+# def mag_gen(ref_mag, mag_err):
+#     """
+#     Add error to magnetic data.
+#     Args:
+#         ref_mag: nx3 true magnetic data, uT.
+#         mag_err: Magnetometer error parameters.
+#             'si': 3x3 soft iron matrix
+#             'hi': hard iron array, [ox, oy, oz], uT
+#             'std': RMS of magnetometer noise, uT
+#     Returns:
+#         mag_mea: ref_mag with error, mag_mea = si * (ref_mag + hi) + noise
+#     """
+#     # total data count
+#     n = ref_mag.shape[0]
+#     # add error
+#     mag_mea = ref_mag + mag_err['hi']
+#     mag_mea = mag_mea.dot(mag_err['si'].T)
+#     mag_noise = mag_err['std'] * np.random.randn(n, 3)
+#     return mag_mea + mag_noise
